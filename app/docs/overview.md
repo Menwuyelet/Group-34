@@ -101,7 +101,7 @@ This project is designed for local and international travelers looking to explor
 ## Contributors
 
 - Menwuyelet Temesgen – Backend developer
-- Dawit Solomon - Frontend developer
+- Dawit Solomon - Fullstack developer
 - Stephen Pakateng - Frontend developer
 - Amen Adane - Fullstack developer
 - Kang Malual- Frontend developer
