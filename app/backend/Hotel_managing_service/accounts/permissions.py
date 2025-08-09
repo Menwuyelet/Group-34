@@ -2,19 +2,19 @@ from rest_framework.permissions import BasePermission
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'admin'
+        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'admin'
 
 class IsStaff(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'staff'
+        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'staff'
 
 class IsManager(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'manager'
-
+        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'manager'
+    
 class IsGuest(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'guest'
+        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'guest'
     
 class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):

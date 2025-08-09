@@ -14,6 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         last_name = validated_data.pop('last_name')
         email = validated_data.pop('email')
         password = validated_data.pop('password')
+        role = validated_data.pop('role')
 
         if not email:
             raise ValueError("Email must be provided.")
@@ -21,6 +22,8 @@ class UserSerializer(serializers.ModelSerializer):
             raise ValueError("First Name must be provided.")
         if not last_name:
             raise ValueError("Last Name must be provided.")
+        if not role:
+            raise ValueError("role must be provided.")
         
         user = User.objects.create(email=email, first_name=first_name, last_name=last_name, **validated_data)
         user.set_password(password)
@@ -33,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         last_name = validated_data.pop('last_name', None)
         email = validated_data.pop('email', None)
         password = validated_data.pop('password', None)
+        role = validated_data.pop('role', None)
 
         if email:
             instance.email=email
@@ -42,6 +46,8 @@ class UserSerializer(serializers.ModelSerializer):
             instance.last_name=last_name
         if password and password != instance.password:
             instance.set_password(password)
+        if role:
+            instance.role=role
         
         instance.save()
         return instance

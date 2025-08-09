@@ -31,17 +31,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
 
     ROLE_CHOICE = [
-        ('admin', 'Site Admin'),
-        ('staff', 'Hotel Staff'),
+        ('admin', 'Admin'),
+        ('staff', 'Staff'),
         ('manager', 'Manager')
     ]
 
-    role = models.CharField(max_length=15, choices=ROLE_CHOICE, default='Hotel Staff')
+    role = models.CharField(max_length=15, choices=ROLE_CHOICE, blank=False)
 
     USERNAME_FIELD='email'
 
     objects = UserManager()
     
+    class Meta:
+        ordering = ['id']
+
     def __str__(self):
         return f"{self.email}"
     
