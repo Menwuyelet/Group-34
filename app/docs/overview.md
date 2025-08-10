@@ -3,6 +3,9 @@
 ## Overview
 
 **Project Name:** GuzoMate
+
+**Sector:**  Hospitality and Tourism Technology
+
 **Purpose:** To provide a centralized digital platform for listing, reviewing, Booking, and promoting hotels in Ethiopia.
 
 This project is designed for local and international travelers looking to explore Ethiopia. It helps them discover and access hotels across the country and enables hotel businesses to promote their services online.
@@ -17,6 +20,13 @@ This project is designed for local and international travelers looking to explor
 
 ---
 
+# Solution
+## GuzoMate addresses these issues by:
+- Offering a unified platform where users can browse, review, and book hotels nationwide.
+- Providing hotels with tools to manage their profiles, availability, and promotions digitally.
+- Supporting multilingual interfaces and multiple currencies to serve both local and international users.
+- Integrating a dedicated microservice for hotel data and booking management to ensure scalability and reliability.
+
 ## Goals
 
 - Create a centralized platform for hotel listing and booking in Ethiopia.
@@ -26,6 +36,12 @@ This project is designed for local and international travelers looking to explor
 - To provide a digital booking Management platform for hotels.
 
 ---
+
+## Target Audience / Beneficiaries
+- Local and international travelers visiting Ethiopia.
+- Ethiopian hotel businesses seeking digital promotion and booking management.
+- Tourism stakeholders looking to improve visitor experience.
+- The broader community benefiting from increased tourism and cultural exchange.
 
 ## Key Features
 
