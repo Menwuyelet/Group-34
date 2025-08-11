@@ -14,11 +14,13 @@ Captures reservation details for a guest at a hotel.
 
 | Field          | Type                                        |
 |----------------|---------------------------------------------|
-| reservation_id | uuid [pk]                                |
+| reservation_id | uuid [pk]                                   |
 | hotel          | uuid                                        |
 | room           | uuid                                        |
 | guest_id       | uuid                                        |
 | description    | text                                        |
+| number_adult   | Int                                         |
+| number_children| Int                                         |
 | start_date     | date                                        |
 | end_date       | date                                        |
 | total_price    | decimal                                     |
@@ -60,8 +62,8 @@ Stores guest reviews for hotels.
 | Field      | Type       |
 |------------|------------|
 | review_id  | uuid [pk]  |
-| hotel_id   | uuid       |
-| user_id    | uuid       |
+| hotel      | uuid       |
+| user       | uuid       |
 | content    | text       |
 | rating     | decimal    |
 | created_at | datetime   |
@@ -79,6 +81,9 @@ Guest profile data and favorite list reference.
 | profile_pic | image    |
 | email       | email    |
 | nationality | varchar  |
+| phone       | varchar  |
+| country     | varchar  |
+| city        | varchar  |
 
 
 ---
@@ -95,6 +100,18 @@ Polymorphic image storage for related entities.
 
 ---
 
+### 6. Location
+
+Defines physical locations for hotels or attractions.
+
+| Field       | Type       | Description                  |
+|-------------|------------|------------------------------|
+| location_id | uuid PK    | Primary key                  |
+| coordinate  | varchar    | Unique coordinate or map point |
+| description | varchar    | relative location            |
+
+---
+
 ### 7. City
 
 Defines cities and associates them with image(s).
@@ -104,8 +121,7 @@ Defines cities and associates them with image(s).
 | city_id     | uuid [pk] |
 | city_name   | varchar   |
 | description | text      |
-| location    | varchar   |
-| image       | uuid      |
+| location    | uuid  |
 
 ---
 
@@ -137,7 +153,7 @@ Tracks reservation history by profile.
 
 ## 🔧 Diagram
 
-![System Architecture](./Booking_api_db.png)
+![System Architecture](./Booking_service_db.png)
 
 ---
 
