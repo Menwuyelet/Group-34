@@ -38,7 +38,7 @@ Each hotel is associated with a user and a location.
 | user        | uuid FK    | References User.user_id      |
 | name        | varchar    | Hotel name                   |
 | location    | uuid FK    | References Location.location_id |
-
+| star        | Int        | The star of the hotel        |
 ### 4. Room
 
 Each room belongs to a specific hotel.
@@ -49,9 +49,10 @@ Each room belongs to a specific hotel.
 | hotel_id       | uuid FK   | References Hotel.hotel_id     |
 | description    | text      | Room description              |
 | type           | varchar   | Type of room (e.g., deluxe)   |
-| room_no        | integer   | Room number                  |
-| price_pernight | decimal   | Nightly price                |
+| room_no        | integer   | Room number                   |
+| price_pernight | decimal   | Nightly price                 |
 | availeble      | bool      | Availability status           |
+| bed_number     | int       | number of beds in the room    |
 
 ### 5. Amenities
 
@@ -63,7 +64,8 @@ Polymorphic table for hotel- or room-level amenities.
 | name            | varchar   | Amenity name                  |
 | description     | text      | Amenity details              |
 | availeblity     | bool      | Indicates if amenity is currently available |
-| amenityable_id  | uuid      | ID of related room or hotel  |
+| hotel_id        | uuid      | Id of related hotel
+| amenityable_id  | uuid      | ID of related room or null if it is hotel amenity |
 | amenityable_type| varchar   | 'Room' or 'Hotel'             |
 
 ### 6. Events
@@ -121,6 +123,8 @@ Captures both online and in-person booking records.
 | guest_gender      | enum      | 'Male' or 'Female'            |
 | guest_id_image    | image     | Guest identification image (optional) |
 | description       | text      | Optional booking notes        |
+| number_adult      | Int       | Number of adults              |
+| number_children   | Int       | Number of children            |
 | start_date        | date      | Check-in date                 |
 | end_date          | date      | Check-out date                |
 | total_price       | decimal   | Final price (before discount) |
@@ -137,7 +141,7 @@ Captures both online and in-person booking records.
 
 ## 🔧 Diagram
 
-![System Architecture](./Management_DB.png)
+![System Architecture](./Hotel_management_db.png)
 
 ---
 
