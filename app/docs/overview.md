@@ -14,7 +14,7 @@ This project is designed for local and international travelers looking to explor
 
 ## Problem Statement
 
-- Lack of a centralized local platform for hotel listing and booking across Ethiopia.
+- Lack of centralized local platform for hotel listing and booking across Ethiopia.
 - Limited access to structured and reliable information for travelers.
 - Minimal digital presence for many hospitality(hotel) businesses in Ethiopia.
 
@@ -25,7 +25,6 @@ This project is designed for local and international travelers looking to explor
 - Offering a unified platform where users can browse, review, and book hotels nationwide.
 - Providing hotels with tools to manage their profiles, availability, and promotions digitally.
 - Supporting multilingual interfaces and multiple currencies to serve both local and international users.
-- Integrating a dedicated microservice for hotel data and booking management to ensure scalability and reliability.
 
 ## Goals
 
@@ -52,13 +51,12 @@ This project is designed for local and international travelers looking to explor
 - **Multilingual Support:** Support for English, Amharic, and potentially more.
 - **Multiple Currencies:** including ETB-based(local currency) pricing and transactions.
 - **Booking Management** For hotels to manage all types of bookings both online and in person.
-- **Microservice Integration:** A dedicated Hotel Management API handles hotel CRUD and availability via internal HTTP communication.
 
 ---
 
 ## System Architecture
 
-- **Architecture Type:** Three-Tier Web Architecture + Microservice Integration
+- **Architecture Type:** Three-Tier Web Architecture
 
 ### Technology Stack
 
@@ -81,21 +79,12 @@ This project is designed for local and international travelers looking to explor
    - Handles user authentication, business rules, data processing, and API endpoints.
    **Responsibilities:**
       - API endpoints for reviews, booking, user authentication
-      - HTTP communication with a separate Hotel Management API
 
 3. **Data Tier (Database)**
    - PostgreSQL for both the booking and management api.
    - Stores hotel data, user profiles, reviews, etc.
 
 ---
-
-## Microservice Integration
-
-- The **Main Backend** communicates with the **Hotel Management API** using secure HTTP requests.
-- The **Hotel API** is a separate Django service responsible for:
-   - Hotel and room data
-   - Availability management
-   - hotel dashboard and profile control
 
 ## Impact
 
