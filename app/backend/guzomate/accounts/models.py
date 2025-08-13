@@ -24,9 +24,9 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=20)
     last_name = models.CharField(max_length=20)
-    email = models.EmailField(unique=True)
     phone = models.CharField(unique=True, max_length=15)
     role = models.CharField(choices=[
                                     ("Admin", "Admin"),
@@ -37,7 +37,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                                     ], 
                             default="Guest"
                             )
-    picture	= models.ImageField(upload_to='profile_pics/')
+    picture	= models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     gender = models.CharField(choices=[
                                     ("Male", "Male"),
                                     ("Female", "Female")
@@ -63,3 +63,4 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_hotel_staff(self):
         return self.role in ["Manager", "Receptionist"]
     
+
