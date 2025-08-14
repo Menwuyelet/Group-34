@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .permissions import IsAdmin, IsOwner, IsGuest, IsManagerOfHotel, IsStaff, IsOwnerofHotel
+from .permissions import IsAdmin, IsOwner, IsGuest, IsManagerOfHotel, IsReceptionist, IsOwnerofHotel
 from .serializers import StaffSerializer, GuestSerializer
 from .models import User
 from rest_framework import generics
@@ -12,34 +12,15 @@ class GuestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsOwner | IsAdmin]
     lookup_field = 'id'
     
+    
     def get_queryset(self):
-        pk = self.kwargs.get('id')  
-        user = self.request.user
-
-        if user.role == 'Admin':
-            return User.objects.filter(role='Guest')
-        elif user.id == pk:
-            return User.objects.filter(id=user.id)
-        else:
-            raise PermissionDenied("You do not have permission to view this profile.")
+        return User.objects.all()
 
     def perform_update(self, serializer):
-        pk = self.kwargs.get('id')  
-        user = self.request.user
-
-        if user.role == 'Admin' or user.id == pk:
-            serializer.save()
-        else:
-            raise PermissionDenied("You do not have permission to view this profile.")
+        serializer.save()
     
     def perform_destroy(self, instance):
-        pk = self.kwargs.get('id')  
-        user = self.request.user
-
-        if user.role == 'Admin' or user.id == pk:
-            instance.delete()
-        else:
-            raise PermissionDenied("You do not have permission to view this profile.")
+        instance.delete()
     
 class GuestCreateView(generics.CreateAPIView):
     serializer_class = GuestSerializer
@@ -63,35 +44,15 @@ class StaffRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        pk = self.kwargs.get('id')  
-        user = self.request.user
-
-        if user.role == 'Manager':
-            roles = ['Manager', 'Receptionist']
-            return User.objects.filter(role__in=roles)
-        elif user.id == pk:
-            return User.objects.filter(id=user.id)
-        else:
-            raise PermissionDenied("You do not have permission to view this profile.")
+        return User.objects.filter(role__in=['Manager', 'Receptionist'])
         
-    def perform_update(self, serializer):
-        pk = self.kwargs.get('id')  
-        user = self.request.user
+def perform_update(self, serializer):
+    serializer.save()
 
-        if user.role == 'Manager' or user.id == pk:
-            serializer.save()
-        else:
-            raise PermissionDenied("You do not have permission to view this profile.")
+def perform_destroy(self, instance):
+    instance.delete()
+
     
-    def perform_destroy(self, instance):
-        pk = self.kwargs.get('id')  
-        user = self.request.user
-
-        if user.role == 'Manager' or user.id == pk:
-            instance.delete()
-        else:
-            raise PermissionDenied("You do not have permission to view this profile.")
-
 class StaffCreateView(generics.CreateAPIView):
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
@@ -105,8 +66,7 @@ class StaffListView(generics.ListAPIView):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
 
     def get_queryset(self):
-        hotel_id = self.kwargs.get('id')
-        return User.objects.filter(hotel=hotel_id)
+        return User.objects.filter(role__in=['Manager', 'Receptionist'])
 
 
 # Create your views here.

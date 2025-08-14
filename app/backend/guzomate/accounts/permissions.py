@@ -2,38 +2,45 @@ from rest_framework.permissions import BasePermission
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'admin'
-
-class IsStaff(BasePermission):
+        return getattr(request.user, 'role', '').lower() == 'admin'
+    
+class IsGuest(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'staff'
+        return getattr(request.user, 'role', '').lower() == 'guest'
+
+class IsOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj == request.user
+
+
+## hotel perms
+class IsReceptionist(BasePermission):
+    message = "You are not allowed to access this hotel data."
+    def has_permission(self, request, view):
+        user = request.user
+        if getattr(user, 'role', '').lower() != 'receptionist':
+            return False
+        hotel_id = view.kwargs.get('pk')
+        return hotel_id and getattr(user.hotel, 'id', None) == hotel_id
 
 class IsManagerOfHotel(BasePermission):
     message = "You are not allowed to access this hotel data."
 
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated or getattr(user, 'role', '').lower() != 'manager':
+        if getattr(user, 'role', '').lower() != 'manager':
             return False
 
         hotel_id = view.kwargs.get('pk')
         return hotel_id and getattr(user.hotel, 'id', None) == hotel_id
     
 
-class IsGuest(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, 'role', '').lower() == 'guest'
-    
-class IsOwner(BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return obj == request.user
-    
 class IsOwnerofHotel(BasePermission):
     message = "You are not allowed to access this hotel data."
 
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated or getattr(user, 'role', '').lower() != 'owner':
+        if getattr(user, 'role', '').lower() != 'owner':
             return False
 
         hotel_id = view.kwargs.get('pk')

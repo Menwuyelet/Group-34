@@ -23,7 +23,7 @@ class UserViewsTest(APITestCase):
             last_name="User",
             phone="0900000000",
             gender="Male",
-            role="admin",
+            role="Admin",
             nationality="Ethiopian",
             password="adminpass"
         )
@@ -88,13 +88,13 @@ class UserViewsTest(APITestCase):
             "email": "test@gmail.com",
             "password": "normaluser"
         }
-        url_listing = reverse('user_list')
         response = self.client.post(url_auth, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         ## test listing with unauthorized user
-        token = response.data.get('access')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        url_listing = reverse('user_list')
+        guest_token = response.data.get('access')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {guest_token}')
         response = self.client.post(url_listing)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -105,8 +105,8 @@ class UserViewsTest(APITestCase):
         }
         response = self.client.post(url_auth, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        token = response.data.get('access')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        admin_token = response.data.get('access')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {admin_token}')
         response = self.client.get(url_listing)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -141,71 +141,78 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         
 
-    # def test_getting_user_detail_with_admin(self):
-    #     url_auth = reverse('token_obtain_pair')
-    #     admin_creds = {
-    #         "email": "admin@example.com",
-    #         "password": "adminpass"
-    #     }
-    #     response = self.client.post(url_auth, admin_creds, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     admin_token = response.data['access']
+    def test_getting_user_detail_with_admin(self):
+        url_auth = reverse('token_obtain_pair')
+        guest_creds = {
+            "email": "test@gmail.com",
+            "password": "normaluser"
+        }
+        response = self.client.post(url_auth, guest_creds, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        guest_id = response.data['id']
+    
+        admin_creds = {
+            "email": "admin@example.com",
+            "password": "adminpass"
+        }
+        response = self.client.post(url_auth, admin_creds, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        admin_token = response.data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {admin_token}')
 
-    #     guest_creds = {
-    #         "email": "test@gmail.com",
-    #         "password": "normaluser"
-    #     }
-    #     response = self.client.post(url_auth, guest_creds, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     guest_id = response.data['id']
-    #     print(guest_id)
-
-    #     self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {admin_token}')
-    #     # ## get detail
-    #     url_detail = reverse('user_detail', kwargs={"id": guest_id})
-    #     response = self.client.get(url_detail)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.data["email"], guest_creds["email"])
+        ## get detail
+        url_detail = reverse('user_detail', kwargs={"id": guest_id})
+        response = self.client.get(url_detail)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], guest_creds["email"])
+        url_detail = reverse('user_detail', kwargs={'id': guest_id})
         
-    #     ## update user
+        ## update user
+        update_data = {
+            "email": "test1@gmail.com",
+            "password": "normaluser1@"
+        }
+        response = self.client.patch(url_detail, update_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], update_data["email"])
 
-    #     update_data = {
-    #         "email": "test1@gmail.com",
-    #         "password": "normaluser1@"
-    #     }
-    #     response = self.client.patch(url_detail, update_data, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.data["email"], update_data["email"])
-
-    #     ## delete user
-    #     response = self.client.delete(url_detail, update_data, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-        ## get user detail with user it self
+        ## delete user
+        response = self.client.delete(url_detail, update_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
-    # def test_getting_guest_detail(self):
-    #     url_auth = reverse('token_obtain_pair')
-    #     url_listing = reverse('user_list')
-    #     data = {
-    #         "email": "admin@example.com",
-    #         "password": "adminpass"
-    #     }
-    #     response = self.client.post(url_auth, data, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     token = response.data.get('access')
-    #     self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-    #     response = self.client.get(url_listing, format='json')
-    #     id = response.data.get('id')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(User.objects.filter(role='Guest').count(), 1)
-       
-    #     url_detail = reverse('user_detail', kwargs={"id": id})
-    #     data = {
-    #         "email": "test@gmail.com",
-    #         "password": "normaluser"
-    #     }
+    def test_getting_guest_detail_with_unauthorized_user(self):
+        url_auth = reverse('token_obtain_pair')
         
+        data = {
+            "email": "admin@example.com",
+            "password": "adminpass"
+        }
+        response = self.client.post(url_auth, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        admin_id= response.data.get('id')
+        url_detail = reverse('user_detail', kwargs={'id': admin_id})
+
+        guest_creds = {
+            "email": "test@gmail.com",
+            "password": "normaluser"
+        }
+        response = self.client.post(url_auth, guest_creds, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        guest_token = response.data['access']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {guest_token}')
+        response = self.client.get(url_detail, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        url_update = reverse('user_detail', kwargs={"id": admin_id})
+        update_data = {
+            "email": "admin1@gmail.com"
+        }
+
+        response = self.client.patch(url_update, update_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # self.assertEqual(response.data["email"], data["email"])
     #     response = self.client.post(url_auth, data, format='json')
     #     token = response.data.get('access')
     #     self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
