@@ -1,7 +1,12 @@
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from django.urls import path
-from .views import GuestRetrieveUpdateDestroyView, GuestCreateView, GuestListView
+from django.urls import path, include
+from .views import GuestRetrieveUpdateDestroyView, GuestCreateView, GuestListView, OwnerCreateView, OwnerListView, OwnerRetrieveUpdateDestroyView, AdminViewSets
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.routers import DefaultRouter
+
+
+router = DefaultRouter()
+router.register(r'admins', AdminViewSets, basename='admins')
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -18,5 +23,9 @@ urlpatterns = [
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('guest/create/', GuestCreateView.as_view(), name='user_create'),
     path('guest/list/', GuestListView.as_view(), name='user_list'),
-    path('guest/<uuid:id>', GuestRetrieveUpdateDestroyView.as_view(), name='user_detail'),
+    path('guest/<uuid:id>/', GuestRetrieveUpdateDestroyView.as_view(), name='user_detail'),
+    path('admin/owners/list/', OwnerListView.as_view(), name='owners'),
+    path('admin/owners/create/', OwnerCreateView.as_view(), name='create_owner'),
+    path('admin/owners/<uuid:id>/', OwnerRetrieveUpdateDestroyView.as_view(), name='owner_detail'),
+    path('admin/', include(router.urls)),
 ]

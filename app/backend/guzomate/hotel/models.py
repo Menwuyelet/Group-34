@@ -27,7 +27,7 @@ class City(models.Model):
 
 class Hotel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    owner = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name="hotels")
+    owner = models.UUIDField(blank=False, null=False)
     name = models.CharField(max_length=30, blank=False, db_index=True)
     location = models.OneToOneField(Location, on_delete=models.SET_NULL, null=True, blank=False)
     star = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
