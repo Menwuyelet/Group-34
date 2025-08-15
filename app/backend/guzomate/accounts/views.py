@@ -1,10 +1,10 @@
 from django.shortcuts import render
 from .permissions import IsAdmin, IsOwner, IsGuest, IsManagerOfHotel, IsReceptionist, IsOwnerofHotel
-from .serializers import StaffSerializer, GuestSerializer
+from .serializers import StaffSerializer, GuestSerializer, OwnerAdminSerializer
 from .models import User
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.exceptions import PermissionDenied
+from rest_framework import viewsets 
 # Create your views here.
 
 class GuestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -12,7 +12,7 @@ class GuestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsOwner | IsAdmin]
     lookup_field = 'id'
     
-    
+
     def get_queryset(self):
         return User.objects.all()
 
@@ -39,20 +39,19 @@ class GuestListView(generics.ListAPIView):
 ## Staff users
 
 class StaffRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsOwner | IsManagerOfHotel | IsOwnerofHotel]
+    permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
     serializer_class = StaffSerializer
     lookup_field = 'id'
 
     def get_queryset(self):
         return User.objects.filter(role__in=['Manager', 'Receptionist'])
         
-def perform_update(self, serializer):
-    serializer.save()
+    def perform_update(self, serializer):
+        serializer.save()
 
-def perform_destroy(self, instance):
-    instance.delete()
+    def perform_destroy(self, instance):
+        instance.delete()
 
-    
 class StaffCreateView(generics.CreateAPIView):
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
@@ -67,6 +66,55 @@ class StaffListView(generics.ListAPIView):
 
     def get_queryset(self):
         return User.objects.filter(role__in=['Manager', 'Receptionist'])
+
+## owner
+
+class OwnerRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = OwnerAdminSerializer
+    permission_classes = [IsAdmin]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return User.objects.filter(role='Owner')
+    
+    def perform_update(self, serializer):
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        instance.delete()
+    
+class OwnerCreateView(generics.CreateAPIView):
+    serializer_class = OwnerAdminSerializer
+    permission_classes = [IsAdmin]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class OwnerListView(generics.ListAPIView):
+    serializer_class = OwnerAdminSerializer
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        return User.objects.filter(role='Owner')
+    
+## Admin
+
+class AdminViewSets(viewsets.ModelViewSet):
+    serializer_class = OwnerAdminSerializer
+    permission_classes = [IsAdmin]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return User.objects.filter(role='Admin')
+
+    def perform_create(self, serializer):
+        
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        instance.delete()
+    
+
 
 
 # Create your views here.
