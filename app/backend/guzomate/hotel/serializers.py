@@ -85,7 +85,7 @@ class CityImageSerializer(serializers.ModelSerializer):
         image = Image.objects.create(image=pic, **validated_data)
         return image
     
-    @transaction.atomic5
+    @transaction.atomic
     def update(self, instance, validated_data):
         if 'image' in validated_data:
             picture = validated_data.pop('image')
@@ -137,7 +137,7 @@ class HotelSerializer(serializers.ModelSerializer):
             owner = User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError({"owner": "the user you entered is not an owner or doesn't exist."})
-        return owner
+        return value
     
     @transaction.atomic
     def create(self, validated_data):
@@ -154,7 +154,7 @@ class HotelSerializer(serializers.ModelSerializer):
                 setattr(instance.location, attr, value)
             instance.location.save()
         
-        owner = validated_data.pop(owner)
+        owner = validated_data.pop('owner', None)
         if owner:
             instance.owner = owner
         
@@ -164,7 +164,10 @@ class HotelSerializer(serializers.ModelSerializer):
         return instance
     
 class RoomSerializer(serializers.ModelSerializer):
-    hotel = serializers.UUIDField(write_only=True)
+    hotel = serializers.PrimaryKeyRelatedField(
+        queryset=Hotel.objects.all(),
+        required=False  
+    )
     class Meta:
         model = Room
         fields = ['id', 'hotel', 'description', 'type', 'room_no', 'price_per_night', 'available', 'number_of_beds']
@@ -175,18 +178,17 @@ class RoomSerializer(serializers.ModelSerializer):
             hotel = Hotel.objects.get(id=value)
         except Hotel.DoesNotExist:
             raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
-        return hotel
+        return value
     
     @transaction.atomic
     def create(self, validated_data):
-        hotel = validated_data.pop('hotel')
-        return Room.objects.create(hotel=hotel, **validated_data)
+        return Room.objects.create(**validated_data)
    
     @transaction.atomic
     def update(self, instance, validated_data):
         if 'hotel' in validated_data:
             hotel = validated_data.pop('hotel')
-            instance.hotel = hotel
+            
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
