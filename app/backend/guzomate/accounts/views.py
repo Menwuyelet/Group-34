@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .permissions import IsAdmin, IsOwner, IsGuest, IsManagerOfHotel, IsReceptionist, IsOwnerofHotel
+from .permissions import IsAdmin, IsOwner, IsManagerOfHotel,  IsOwnerofHotel
 from .serializers import StaffSerializer, GuestSerializer, OwnerAdminSerializer
 from .models import User
 from rest_framework import generics
@@ -88,7 +88,8 @@ class OwnerCreateView(generics.CreateAPIView):
     permission_classes = [IsAdmin]
 
     def perform_create(self, serializer):
-        serializer.save()
+        role="Owner"
+        serializer.save(role=role)
 
 class OwnerListView(generics.ListAPIView):
     serializer_class = OwnerAdminSerializer
@@ -108,60 +109,9 @@ class AdminViewSets(viewsets.ModelViewSet):
         return User.objects.filter(role='Admin')
 
     def perform_create(self, serializer):
-        
-        serializer.save()
+        role = "Admin"
+        serializer.save(role=role)
     
     def perform_destroy(self, instance):
         instance.delete()
     
-
-
-
-# Create your views here.
-
-# class UserProfileCreateView(generics.CreateAPIView):
-#     serializer_class = UserSerializer
-#     permission_classes = [IsAuthenticated, IsManager | IsAdmin]
-
-#     def perform_create(self, serializer):
-#         serializer.save()
-    
-# class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
-#     serializer_class = UserSerializer
-#     permission_classes = [IsAuthenticated, IsManager | IsOwner]
-
-#     def get_queryset(self):
-#         pk = self.kwargs.get('pk')  
-#         user = self.request.user
-
-#         if user.role == 'manager':
-#             return User.objects.all()
-#         elif user.id == pk:
-#             return User.objects.filter(id=user.id)
-#         else:
-#             raise PermissionDenied("You do not have permission to view this profile.")
-
-#     def perform_update(self, serializer):
-#         pk = self.kwargs.get('pk')  
-#         user = self.request.user
-
-#         if user.role == 'manager' or user.id == pk:
-#             serializer.save()
-#         else:
-#             raise PermissionDenied("You do not have permission to view this profile.")
-    
-#     def perform_destroy(self, instance):
-#         pk = self.kwargs.get('pk')  
-#         user = self.request.user
-
-#         if user.role == 'manager' or user.id == pk:
-#             instance.delete()
-#         else:
-#             raise PermissionDenied("You do not have permission to view this profile.")
-
-# class UserListView(generics.ListAPIView):
-#     serializer_class = UserSerializer
-#     permission_classes = [IsAuthenticated, IsManager]
-
-#     def get_queryset(self):
-#         return User.objects.all()

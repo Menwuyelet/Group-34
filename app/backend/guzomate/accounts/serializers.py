@@ -179,14 +179,8 @@ class OwnerAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'phone', 'role', 'picture', 'gender', 'nationality', 'password']
-        read_only_fields = ['id']
-        required_fields = ['role']
+        read_only_fields = ['id', 'role']
 
-    def validate_role(self, value):
-        if value in ['Owner', 'Admin']:
-            return value
-        raise serializers.ValidationError('the allowed roles are owner and admin.')
-    
     def validate_picture(self, value):
         if value == None:
             return value
@@ -211,29 +205,31 @@ class OwnerAdminSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Password must contain at least one number.")
         if not re.search(r'[!@#$%^&*(),.?\":{}|<>]', value):
             raise serializers.ValidationError("Password must contain at least one special character.")
-
         return value
 
     
     @transaction.atomic
     def create(self, validated_data):
-        first_name = validated_data.pop('first_name')
-        last_name = validated_data.pop('last_name')
-        email = validated_data.pop('email')
+        first_name = validated_data.pop('first_name', None)
+        last_name = validated_data.pop('last_name', None)
+        email = validated_data.pop('email', None)
         password = validated_data.pop('password')
         role = validated_data.pop('role')
         if not email:
-            raise ValueError("Email must be provided.")
+            raise serializers.ValidationError("Email must be provided.")
         if not first_name:
-            raise ValueError("First Name must be provided.")
+            raise serializers.ValidationError("First Name must be provided.")
         if not last_name:
-            raise ValueError("Last Name must be provided.")
+            raise serializers.ValidationError("Last Name must be provided.")
+        if not role:
+            raise serializers.ValidationError("Role should be provided.")
         if role == "Admin":
             ## try this one to create a super user.
-            print("Admin")
-            user = User.objects.create(email=email, first_name=first_name, last_name=last_name, is_staff=True, **validated_data)
+            user = User.objects.create(email=email, first_name=first_name, last_name=last_name, role=role, is_staff=True, **validated_data)
+        elif role == "Owner":
+            user = User.objects.create(email=email, first_name=first_name, last_name=last_name, role=role, **validated_data)
         else:
-            user = User.objects.create(email=email, first_name=first_name, last_name=last_name, **validated_data)
+            raise serializers.ValidationError("Role should be admin or owner.")
         user.set_password(password)
         user.save()
         return user
