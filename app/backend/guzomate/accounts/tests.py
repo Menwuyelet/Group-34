@@ -38,7 +38,7 @@ class UserViewsTest(APITestCase):
         )
 
     def test_create_user_with_valid_data(self):
-        url = reverse('user_create')
+        url = reverse('create_user')
         data = {
             "email": "newuser1@example.com",
             "first_name": "New",
@@ -51,7 +51,7 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_user_with_faulty_password(self):
-        url = reverse('user_create')
+        url = reverse('create_user')
         data = {
             "email": "newuser1@example.com",
             "first_name": "New",
@@ -91,7 +91,7 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         ## test listing with unauthorized user
-        url_listing = reverse('user_list')
+        url_listing = reverse('list_users')
         guest_token = response.data.get('access')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {guest_token}')
         response = self.client.post(url_listing)
@@ -121,7 +121,7 @@ class UserViewsTest(APITestCase):
         guest_id = response.data['id']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {guest_token}')
 
-        url_detail = reverse('user_detail', kwargs={"id": guest_id})
+        url_detail = reverse('retrieve_user', kwargs={"id": guest_id})
         response = self.client.get(url_detail, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], guest_creds["email"])
@@ -160,11 +160,11 @@ class UserViewsTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {admin_token}')
 
         ## get detail
-        url_detail = reverse('user_detail', kwargs={"id": guest_id})
+        url_detail = reverse('retrieve_user', kwargs={"id": guest_id})
         response = self.client.get(url_detail)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], guest_creds["email"])
-        url_detail = reverse('user_detail', kwargs={'id': guest_id})
+        url_detail = reverse('retrieve_user', kwargs={'id': guest_id})
         
         ## update user
         update_data = {
@@ -190,7 +190,7 @@ class UserViewsTest(APITestCase):
         response = self.client.post(url_auth, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         admin_id= response.data.get('id')
-        url_detail = reverse('user_detail', kwargs={'id': admin_id})
+        url_detail = reverse('retrieve_user', kwargs={'id': admin_id})
 
         guest_creds = {
             "email": "test@gmail.com",
@@ -204,7 +204,7 @@ class UserViewsTest(APITestCase):
         response = self.client.get(url_detail, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        url_update = reverse('user_detail', kwargs={"id": admin_id})
+        url_update = reverse('retrieve_user', kwargs={"id": admin_id})
         update_data = {
             "email": "admin1@gmail.com"
         }
@@ -365,7 +365,7 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         ## owners retrieve
-        owner_url = reverse('owners')
+        owner_url = reverse('list_owners')
         ## valid user
         response = self.client.get(owner_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

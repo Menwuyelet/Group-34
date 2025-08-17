@@ -45,6 +45,8 @@ class Room(models.Model):
     available = models.BooleanField(default=True, db_index=True)
     number_of_beds = models.IntegerField(blank=False, null=False)
 
+    # class Meta:
+    #     unique_together = ('hotel', 'room_no')
     def __str__(self):
         return f"room_id: {self.id} room_type: {self.type} - hotel_id: {self.hotel}"
 

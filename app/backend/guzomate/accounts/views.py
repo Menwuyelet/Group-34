@@ -5,6 +5,8 @@ from .models import User
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets 
+from hotel.models import Hotel
+from rest_framework import serializers
 # Create your views here.
 
 class GuestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -42,6 +44,7 @@ class StaffRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
     serializer_class = StaffSerializer
     lookup_field = 'id'
+    lookup_url_kwarg = 'staff_id'
 
     def get_queryset(self):
         return User.objects.filter(role__in=['Manager', 'Receptionist'])
@@ -56,10 +59,13 @@ class StaffCreateView(generics.CreateAPIView):
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
 
-    def perform_create(self, serializer):
-        hotel_id = self.kwargs.get('id')
-        serializer.save(hotel=hotel_id)
-        
+    def get_serializer(self, *args, **kwargs):
+        hotel_id = self.kwargs.get('hotel_id')
+        if 'data' in kwargs:
+            kwargs['data'] = kwargs['data'].copy()
+            kwargs['data']['hotel'] = hotel_id  # assign hotel to serializer data
+        return super().get_serializer(*args, **kwargs)
+
 class StaffListView(generics.ListAPIView):
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]

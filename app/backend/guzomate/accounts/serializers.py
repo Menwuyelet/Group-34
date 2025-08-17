@@ -9,7 +9,7 @@ class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'phone', 'role','picture', 'gender', 'nationality', 'hotel', 'password']
-        read_only_field = ['hotel']
+        read_only_field = ['id', 'role']
     def validate_picture(self, value):
         if value == None:
             return value
@@ -40,7 +40,7 @@ class StaffSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         role = attrs.get('role')
         hotel = attrs.get('hotel')
-
+        print(hotel)
         if role in ["Manager", "Receptionist"] and not hotel:
             raise serializers.ValidationError({
                 "hotel": "Hotel must be provided for for this user."
@@ -58,13 +58,21 @@ class StaffSerializer(serializers.ModelSerializer):
         last_name = validated_data.pop('last_name')
         email = validated_data.pop('email')
         password = validated_data.pop('password')
+        role = validated_data.pop('role', None)
+
         if not email:
             raise ValueError("Email must be provided.")
         if not first_name:
             raise ValueError("First Name must be provided.")
         if not last_name:
             raise ValueError("Last Name must be provided.")
-        user = User.objects.create(email=email, first_name=first_name, last_name=last_name, **validated_data)
+        if role == "Manager" or role == "Receptionist":
+            ## try this one to create a super user.
+            user = User.objects.create(email=email, first_name=first_name, last_name=last_name, role=role, **validated_data)
+        elif role == None:
+            user = User.objects.create(email=email, first_name=first_name, last_name=last_name, role="Receptionist", **validated_data)
+        else:
+            raise serializers.ValidationError("Role should be manager or receptionist.")
         user.set_password(password)
         user.save()
         return user

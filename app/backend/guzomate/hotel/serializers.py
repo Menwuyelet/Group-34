@@ -45,12 +45,27 @@ class LocationSerializer(serializers.ModelSerializer):
         return instance
 
 class HotelImageSerializer(serializers.ModelSerializer):
-    hotel = serializers.HiddenField(default=None)
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)  # read-only now
+
     class Meta:
         model = Image
         fields = ['id', 'image', 'imageable_type', 'imageable_id', 'hotel_name', 'uploaded_at', 'hotel']
-        read_only_fields = ['id', 'uploaded_at']
-    
+        read_only_fields = ['id', 'uploaded_at', 'imageable_id', 'hotel']
+
+
+    def validate(self, attrs):
+        imageable_type = attrs.get('imageable_type')
+        if imageable_type not in ['Hotel', 'Room', 'Amenity', 'Event']:
+            raise serializers.ValidationError({"imageable_type": "Must be 'Hotel', 'Amenity', 'Event', or 'Room'."})
+        return attrs
+
+    def validate_hotel(self, value):
+        try:
+            hotel = Hotel.objects.get(id=value)
+        except Hotel.DoesNotExist:
+            raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
+        return value
+
     @transaction.atomic
     def create(self, validated_data):
         picture = validated_data.pop('image')
@@ -60,6 +75,9 @@ class HotelImageSerializer(serializers.ModelSerializer):
     
     @transaction.atomic
     def update(self, instance, validated_data):
+        if 'hotel' in validated_data:
+            hotel = validated_data.pop('hotel')
+            
         if 'image' in validated_data:
             picture = validated_data.pop('image')
             pic = validate_picture(picture)
