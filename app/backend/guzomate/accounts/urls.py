@@ -25,10 +25,11 @@ urlpatterns = [
 
     ## guest
     path('guest/create/', GuestCreateView.as_view(), name='create_user'),
-    path('guest/list/', GuestListView.as_view(), name='list_users'),
     path('guest/<uuid:id>/', GuestRetrieveUpdateDestroyView.as_view(), name='retrieve_user'),
 
     ## admin
+    path('admin/guest/list/', GuestListView.as_view(), name='list_users'),
+    path('admin/guest/<uuid:id>/', GuestRetrieveUpdateDestroyView.as_view(), name='retrieve_user'),
     path('admin/owners/list/', OwnerListView.as_view(), name='list_owners'),
     path('admin/owners/create/', OwnerCreateView.as_view(), name='create_owner'),
     path('admin/owners/<uuid:id>/', OwnerRetrieveUpdateDestroyView.as_view(), name='retrieve_owner'),

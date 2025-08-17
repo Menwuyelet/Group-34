@@ -1,5 +1,16 @@
 from rest_framework import serializers
-from .models import Location, Image, City, Hotel, Room, Amenities, LocalAttraction, HotelCities, HotelAttraction, Event
+from .models import (
+                       Location,
+                       Image, 
+                       City, 
+                       Hotel, 
+                       Room, 
+                       Amenities, 
+                       LocalAttraction, 
+                       HotelCities, 
+                       HotelAttraction, 
+                       Event
+                    )
 from accounts.utils.validators import validate_picture
 from django.db import transaction
 from accounts.models import User
@@ -46,18 +57,18 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class HotelImageSerializer(serializers.ModelSerializer):
     hotel = serializers.PrimaryKeyRelatedField(read_only=True)  # read-only now
-
+    imageable_type = serializers.CharField(read_only=True)
     class Meta:
         model = Image
         fields = ['id', 'image', 'imageable_type', 'imageable_id', 'hotel_name', 'uploaded_at', 'hotel']
-        read_only_fields = ['id', 'uploaded_at', 'imageable_id', 'hotel']
+        read_only_fields = ['id', 'uploaded_at','imageable_type', 'imageable_id','hotel_name', 'hotel']
 
 
-    def validate(self, attrs):
-        imageable_type = attrs.get('imageable_type')
-        if imageable_type not in ['Hotel', 'Room', 'Amenity', 'Event']:
-            raise serializers.ValidationError({"imageable_type": "Must be 'Hotel', 'Amenity', 'Event', or 'Room'."})
-        return attrs
+    # def validate(self, attrs):
+    #     imageable_type = attrs.get('imageable_type')
+    #     if imageable_type not in ['Hotel', 'Room', 'Amenity', 'Event']:
+    #         raise serializers.ValidationError({"imageable_type": "Must be 'Hotel', 'Amenity', 'Event', or 'Room'."})
+    #     return attrs
 
     def validate_hotel(self, value):
         try:
@@ -68,7 +79,9 @@ class HotelImageSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        picture = validated_data.pop('image')
+        picture = validated_data.pop('image', None)
+        if not picture:
+            raise serializers.ValidationError({"Image":"Image must be provided."})
         pic = validate_picture(picture)
         image = Image.objects.create(image=pic, **validated_data)
         return image
@@ -182,10 +195,7 @@ class HotelSerializer(serializers.ModelSerializer):
         return instance
     
 class RoomSerializer(serializers.ModelSerializer):
-    hotel = serializers.PrimaryKeyRelatedField(
-        queryset=Hotel.objects.all(),
-        required=False  
-    )
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)  # read-only now
     class Meta:
         model = Room
         fields = ['id', 'hotel', 'description', 'type', 'room_no', 'price_per_night', 'available', 'number_of_beds']
@@ -213,10 +223,11 @@ class RoomSerializer(serializers.ModelSerializer):
         return instance
 
 class HotelAmenitiesSerializer(serializers.ModelSerializer):
-    hotel = serializers.UUIDField(write_only=True)
-    model = Amenities
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True) 
+    amenityable_type = serializers.CharField(read_only=True)
     class Meta:
-        fields = ['id', 'name', 'description', 'available', 'hotel', 'amenityable_type']
+        model = Amenities
+        fields = ['id', 'name', 'description', 'availability', 'hotel', 'amenityable_type']
         read_only_fields = ['id']
 
     def validate_hotel(self, value):
@@ -229,7 +240,7 @@ class HotelAmenitiesSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         hotel = validated_data.pop('hotel')
-        return Room.objects.create(hotel=hotel, **validated_data)
+        return Amenities.objects.create(hotel=hotel, **validated_data)
    
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -239,11 +250,13 @@ class HotelAmenitiesSerializer(serializers.ModelSerializer):
         return instance
     
 class RoomAmenitiesSerializer(serializers.ModelSerializer):
-    hotel = serializers.UUIDField(write_only=True)
-    room = serializers.UUIDField(write_only=True)
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True) 
+    amenityable_type = serializers.CharField(read_only=True)
+    amenityable_id = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Amenities
-        fields = ['id', 'name', 'description', 'available', 'hotel', 'amenityable_type', 'amenityable_id']
+        fields = ['id', 'name', 'description', 'availability', 'hotel', 'amenityable_type', 'amenityable_id']
         read_only_fields = ['id']
    
     def validate_hotel(self, value):
@@ -253,18 +266,18 @@ class RoomAmenitiesSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
         return hotel
     
-    def validate_room(self, value):
+    def validate_amenityable_id(self, value):
         try:
             room = Room.objects.get(id=value)
         except Room.DoesNotExist:
             raise serializers.ValidationError({"Room": "the selected room doesn't exist."})
-        return room
+        return value
     
     @transaction.atomic
     def create(self, validated_data):
         hotel = validated_data.pop('hotel')
-        room = validated_data.pop('room')
-        return Room.objects.create(hotel=hotel, room=room, **validated_data)
+        room = validated_data.pop('amenityable_id')
+        return Amenities.objects.create(hotel=hotel, amenityable_id=room, **validated_data)
    
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -272,22 +285,20 @@ class RoomAmenitiesSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
-
-    
+ 
 class EventSerializer(serializers.ModelSerializer):
-    hotel = serializers.UUIDField(write_only=True)
-
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)  # read-only now
     class Meta:
         model = Event
         fields = ['id', 'title', 'description', 'accessibility', 'price', 'hotel']
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'hotel']
 
     def validate_hotel(self, value):
         try:
             hotel = Hotel.objects.get(id=value)
         except Hotel.DoesNotExist:
             raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
-        return hotel
+        return value
     @transaction.atomic
     def create(self, validated_data):
         hotel = validated_data.pop('hotel')
@@ -301,7 +312,6 @@ class EventSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
-
 class LocalAttractionSerializer(serializers.ModelSerializer):
     location = LocationSerializer()
     city = serializers.UUIDField(write_only=True)
