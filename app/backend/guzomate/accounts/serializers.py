@@ -6,6 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 
 class StaffSerializer(serializers.ModelSerializer):
     password = serializers.CharField(required=True, write_only=True)
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'phone', 'role','picture', 'gender', 'nationality', 'hotel', 'password']
@@ -40,11 +41,6 @@ class StaffSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         role = attrs.get('role')
         hotel = attrs.get('hotel')
-        print(hotel)
-        if role in ["Manager", "Receptionist"] and not hotel:
-            raise serializers.ValidationError({
-                "hotel": "Hotel must be provided for for this user."
-            })
         if role in ["Owner", 'Guest', 'Admin']:
             raise serializers.ValidationError({
                 "hotel": "User can not be Owner, Guest or Admin, please choose different role."

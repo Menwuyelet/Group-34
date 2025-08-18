@@ -40,15 +40,15 @@ class HotelDestroyView(generics.DestroyAPIView):
 class HotelViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'id'
     lookup_url_kwarg = 'hotel_id' 
-    queryset = Hotel.objects.all()
+    queryset = Hotel.objects.all().order_by('name')
     serializer_class = HotelSerializer
     permission_classes = [AllowAny]
     
 ## Room
 class RoomCreateView(generics.CreateAPIView):
     serializer_class = RoomSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         hotel_id = self.kwargs.get('hotel_id')
@@ -57,8 +57,8 @@ class RoomCreateView(generics.CreateAPIView):
 
 class RoomUpdateView(generics.UpdateAPIView):
     serializer_class = RoomSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel | IsReceptionist]
+    # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'room_id' 
     def get_queryset(self):
@@ -70,8 +70,8 @@ class RoomUpdateView(generics.UpdateAPIView):
 
 class RoomDestroyView(generics.DestroyAPIView):
     serializer_class = RoomSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_url_kwarg = 'room_id' 
     def get_queryset(self):
         hotel_id = self.kwargs.get('hotel_id')
@@ -84,14 +84,14 @@ class RoomViewSets(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         hotel_id = self.kwargs.get('hotel_id')  
-        return Room.objects.filter(hotel_id=hotel_id)
+        return Room.objects.filter(hotel_id=hotel_id).order_by('room_no')
 
 ## Event
 
 class EventCreateView(generics.CreateAPIView):
     serializer_class = EventSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         hotel_id = self.kwargs.get('hotel_id')
@@ -100,8 +100,8 @@ class EventCreateView(generics.CreateAPIView):
 
 class EventUpdateView(generics.UpdateAPIView):
     serializer_class = EventSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'event_id'
 
@@ -114,8 +114,8 @@ class EventUpdateView(generics.UpdateAPIView):
 
 class EventDestroyView(generics.DestroyAPIView):
     serializer_class = EventSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_url_kwarg = 'event_id'
 
     def get_queryset(self):
@@ -129,14 +129,14 @@ class EventViewSets(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         hotel_id = self.kwargs.get('hotel_id')
-        return Event.objects.filter(hotel_id=hotel_id)
+        return Event.objects.filter(hotel_id=hotel_id).order_by('title')
 
 ## Hotel Amenities
 
 class AmenityCreateView(generics.CreateAPIView):
     serializer_class = HotelAmenitiesSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         hotel_id = self.kwargs.get('hotel_id')
@@ -145,8 +145,8 @@ class AmenityCreateView(generics.CreateAPIView):
 
 class AmenityUpdateView(generics.UpdateAPIView):
     serializer_class = HotelAmenitiesSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'amenity_id'
 
@@ -159,8 +159,8 @@ class AmenityUpdateView(generics.UpdateAPIView):
 
 class AmenityDestroyView(generics.DestroyAPIView):
     serializer_class = HotelAmenitiesSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_url_kwarg = 'amenity_id'
 
     def get_queryset(self):
@@ -175,7 +175,7 @@ class AmenityViewSets(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         hotel_id = self.kwargs.get('hotel_id')
         amenityable_type="Hotel"
-        return Amenities.objects.filter(hotel_id=hotel_id, amenityable_type="Hotel")
+        return Amenities.objects.filter(hotel_id=hotel_id, amenityable_type="Hotel").order_by('name')
 
 ## Room Amenities
 

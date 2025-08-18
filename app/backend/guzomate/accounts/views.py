@@ -34,7 +34,7 @@ class GuestCreateView(generics.CreateAPIView):
 class GuestListView(generics.ListAPIView):
     serializer_class = GuestSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
-
+    # permission_classes = [AllowAny]
     def get_queryset(self):
         return User.objects.filter(role="Guest")
 
@@ -42,6 +42,7 @@ class GuestListView(generics.ListAPIView):
 
 class StaffRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
+    # permission_classes = [AllowAny]
     serializer_class = StaffSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'staff_id'
@@ -63,13 +64,13 @@ class StaffCreateView(generics.CreateAPIView):
         hotel_id = self.kwargs.get('hotel_id')
         if 'data' in kwargs:
             kwargs['data'] = kwargs['data'].copy()
-            kwargs['data']['hotel'] = hotel_id  # assign hotel to serializer data
+            kwargs['data']['hotel'] = hotel_id  
         return super().get_serializer(*args, **kwargs)
 
 class StaffListView(generics.ListAPIView):
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
-
+    # permission_classes = [AllowAny]
     def get_queryset(self):
         return User.objects.filter(role__in=['Manager', 'Receptionist'])
 

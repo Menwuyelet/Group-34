@@ -168,8 +168,10 @@ class HotelSerializer(serializers.ModelSerializer):
             owner = User.objects.get(id=value)
         except User.DoesNotExist:
             raise serializers.ValidationError({"owner": "the user you entered is not an owner or doesn't exist."})
-        return value
-    
+        if owner.role == "Owner":
+            return value
+        raise serializers.ValidationError({"owner": "the user you entered is not an owner"})
+        
     @transaction.atomic
     def create(self, validated_data):
         location_data = validated_data.pop('location')

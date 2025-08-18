@@ -16,12 +16,27 @@ class IsOwner(BasePermission):
 ## hotel perms
 class IsReceptionist(BasePermission):
     message = "You are not allowed to access this hotel data."
+
     def has_permission(self, request, view):
         user = request.user
+
+        # 1. Only receptionist are allowed
         if getattr(user, 'role', '').lower() != 'receptionist':
             return False
-        hotel_id = view.kwargs.get('pk')
-        return hotel_id and getattr(user.hotel, 'id', None) == hotel_id
+
+        # 2. Get hotel_id from URL
+        hotel_id = view.kwargs.get('hotel_id')
+        if not hotel_id:
+            return False
+
+        # 3. Check hotel exists
+        try:
+            hotel = Hotel.objects.get(id=hotel_id)
+        except Hotel.DoesNotExist:
+            return False
+
+        # 4. Check if the user is in hotel staff
+        return hotel.staff_members.filter(id=user.id).exists()
 
 class IsManagerOfHotel(BasePermission):
     message = "You are not allowed to access this hotel data."
