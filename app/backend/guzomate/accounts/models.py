@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 import uuid
+from hotel.utils.path import user_image_upload_path
 
 
 class UserManager(BaseUserManager):
@@ -37,7 +38,12 @@ class User(AbstractBaseUser, PermissionsMixin):
                                     ], 
                             default="Guest"
                             )
-    picture	= models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    
+    picture = models.ImageField(
+        upload_to=user_image_upload_path,
+        null=True,
+        blank=True
+    )
     gender = models.CharField(choices=[
                                     ("Male", "Male"),
                                     ("Female", "Female")
