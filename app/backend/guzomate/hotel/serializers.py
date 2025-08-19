@@ -63,13 +63,6 @@ class HotelImageSerializer(serializers.ModelSerializer):
         fields = ['id', 'image', 'imageable_type', 'imageable_id', 'hotel_name', 'uploaded_at', 'hotel']
         read_only_fields = ['id', 'uploaded_at','imageable_type', 'imageable_id','hotel_name', 'hotel']
 
-
-    # def validate(self, attrs):
-    #     imageable_type = attrs.get('imageable_type')
-    #     if imageable_type not in ['Hotel', 'Room', 'Amenity', 'Event']:
-    #         raise serializers.ValidationError({"imageable_type": "Must be 'Hotel', 'Amenity', 'Event', or 'Room'."})
-    #     return attrs
-
     def validate_hotel(self, value):
         try:
             hotel = Hotel.objects.get(id=value)

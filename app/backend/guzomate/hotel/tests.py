@@ -3,8 +3,8 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.urls import reverse
 from accounts.models import User
-from hotel.models import Hotel, Location, Room, Event, Amenities
-
+from hotel.models import Hotel, Location, Room, Event, Amenities, Image
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -125,6 +125,53 @@ class HotelViewsTest(APITestCase):
             hotel=self.hotel, name="Pool", description="Swimming Pool", availability=False, amenityable_type="Hotel"
         )
 
+
+        # Room Amenities
+        self.room_amenity1 = Amenities.objects.create(
+            hotel=self.hotel, name="WiFi", description="Free WiFi", availability=True,
+            amenityable_type="Room", amenityable_id=self.room
+        )
+        self.room_amenity2 = Amenities.objects.create(
+            hotel=self.hotel, name="TV", description="Smart TV", availability=False,
+            amenityable_type="Room", amenityable_id=self.room
+        )
+
+        ## Hotel image
+        self.image_file = SimpleUploadedFile("test_image.jpg", b"file_content", content_type="image/jpeg")
+        self.image1 = Image.objects.create(
+            hotel=self.hotel.id, image=self.image_file, imageable_type="Hotel",
+            imageable_id=self.hotel.id, hotel_name=self.hotel.name
+        )
+        self.image2 = Image.objects.create(
+            hotel=self.hotel.id, image=self.image_file, imageable_type="Hotel",
+            imageable_id=self.hotel.id, hotel_name=self.hotel.name
+        )
+        ## Room image
+        self.Room_image = Image.objects.create(
+            image=self.image_file, imageable_type="Room",
+            imageable_id=self.room.id, hotel=self.hotel.id, hotel_name=self.hotel.name
+        )
+        self.Room_image2 = Image.objects.create(
+            image=self.image_file, imageable_type="Room",
+            imageable_id=self.room.id, hotel=self.hotel.id, hotel_name=self.hotel.name
+        )
+        ## Event image
+        self.event_image1 = Image.objects.create(
+            imageable_type='Event',
+            imageable_id=self.event1.id,
+            hotel=self.hotel.id,
+            hotel_name=self.hotel.name,
+            image=SimpleUploadedFile(name='test.jpg', content=b'\x47\x49\x46\x38', content_type='image/gif')
+        )
+
+        self.event_image2 = Image.objects.create(
+            imageable_type='Event',
+            imageable_id=self.event1.id,
+            hotel=self.hotel.id,
+            hotel_name=self.hotel.name,
+            image=SimpleUploadedFile(name='test.jpg', content=b'\x47\x49\x46\x38', content_type='image/gif')
+        )
+
     def test_admin_can_create_hotel(self):
         url = reverse("create_hotel")
         data = {
@@ -199,7 +246,6 @@ class HotelViewsTest(APITestCase):
                 "local_name": "BlockedLoc"
             }
         }
-        # Try with Owner, Manager, Receptionist
         for tokens in [self.owner_tokens, self.manager_tokens, self.reception_tokens, self.user_tokens]:
             self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
             response = self.client.put(url, data, format="json")
@@ -213,7 +259,6 @@ class HotelViewsTest(APITestCase):
 
     def test_non_admin_cannot_delete_hotel(self):
         url = reverse("delete_hotel", kwargs={"hotel_id": str(self.hotel.id)})
-        # Owner, Manager, Receptionist, Normal User
         for tokens in [self.owner_tokens, self.manager_tokens, self.reception_tokens, self.user_tokens]:
             self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
             response = self.client.delete(url)
@@ -260,8 +305,8 @@ class HotelViewsTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
         data = {
             "owner": str(self.owner_user.id),
-            "name": "",  # Invalid: blank name
-            "star": -1,  # Invalid: star should be positive
+            "name": "", 
+            "star": -1,  
             "location": {"latitude": None, "longitude": None, "local_name": ""}
         }
         response = self.client.put(url, data, format="json")
@@ -281,7 +326,7 @@ class HotelViewsTest(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-#Room
+##Room
     def test_owner_can_create_room(self):
         url = reverse("create_room", kwargs={"hotel_id": str(self.hotel.id)})
         data = {
@@ -419,9 +464,9 @@ class HotelViewsTest(APITestCase):
             "description": "",
             "type": "",
             "room_no": "",
-            "price_per_night": -50,  # invalid
+            "price_per_night": -50,  
             "available": True,
-            "number_of_beds": -1    # invalid
+            "number_of_beds": -1 
         }
         response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -446,7 +491,7 @@ class HotelViewsTest(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-# Staff
+## Staff
     def test_manager_can_create_receptionist(self):
         create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
@@ -485,8 +530,7 @@ class HotelViewsTest(APITestCase):
         }
         response = self.client.patch(detail_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # self.receptionist.refresh_from_db()
+    
         user = User.objects.get(email="john@example.com")
         self.assertEqual(user.first_name, "Updated")
         self.assertEqual(user.phone, "+251911223344")
@@ -685,5 +729,271 @@ class HotelViewsTest(APITestCase):
         url = reverse("delete_amenity", kwargs={"hotel_id": self.hotel.id, "amenity_id": self.amenity2.id})
         for tokens in [self.admin_tokens, self.reception_tokens, self.user_tokens]:
             self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+##Room amenity
+    def test_any_user_can_list_room_amenities(self):
+        url = reverse("list_room_amenities", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id})
+        for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
+                       self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            amenity_ids = [a["id"] for a in response.data['results']]
+            self.assertIn(str(self.room_amenity1.id), amenity_ids)
+            self.assertIn(str(self.room_amenity2.id), amenity_ids)
+
+    def test_any_user_can_retrieve_room_amenity(self):
+        url = reverse("retrieve_room_amenity", kwargs={
+            "hotel_id": self.hotel.id, "room_id": self.room.id, "amenity_id": self.room_amenity1.id
+        })
+        for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
+                       self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["id"], str(self.room_amenity1.id))
+
+    def test_manager_and_owner_can_create_room_amenity(self):
+        url = reverse("create_room_amenity", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id})
+        data = {"name": "Mini Bar", "description": "Available drinks", "availability": True}
+        for tokens in [self.owner_tokens, self.manager_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.post(url, data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.data["name"], "Mini Bar")
+
+    def test_any_user_can_not_create_room_amenity(self):
+        url = reverse("create_room_amenity", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id})
+        data = {"name": "Mini Bar", "description": "Available drinks", "availability": True}
+        for tokens in [self.admin_tokens, self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.post(url, data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+    def test_manager_and_owner_update_room_amenity(self):
+        url = reverse("update_room_amenity", kwargs={
+            "hotel_id": self.hotel.id, "room_id": self.room.id, "amenity_id": self.room_amenity1.id
+        })
+        data = {"name": "WiFi Updated", "description": "Updated Desc", "availability": False}
+        for tokens in [self.owner_tokens, self.manager_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.put(url, data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["name"], "WiFi Updated")
+
+    def test_any_user_can_not_update_room_amenity(self):
+        url = reverse("update_room_amenity", kwargs={
+            "hotel_id": self.hotel.id, "room_id": self.room.id, "amenity_id": self.room_amenity1.id
+        })
+        data = {"name": "WiFi Updated", "description": "Updated Desc", "availability": False}
+        for tokens in [self.admin_tokens, self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.put(url, data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(response.data["detail"], "You do not have permission to perform this action.")
+
+    def test_manager_and_owner_can_delete_room_amenity(self):
+        amenities = [self.room_amenity1.id, self.room_amenity2.id]  
+        users_tokens = [self.manager_tokens, self.owner_tokens]
+
+        for amenity, tokens in zip(amenities, users_tokens):
+            url = reverse("delete_room_amenity", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id, "amenity_id": amenity})
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_any_user_can_not_delete_room_amenity(self):
+        amenities = [self.room_amenity1.id, self.room_amenity2.id]  
+        users_tokens = [self.admin_tokens, self.reception_tokens, self.user_tokens]
+
+        for amenity, tokens in zip(amenities, users_tokens):
+            url = reverse("delete_room_amenity", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id, "amenity_id": amenity})
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+## Hotel image
+    def test_non_owner_manager_cannot_create_hotel_image(self):
+        url = reverse(
+            "create_hotel_image",
+            kwargs={"hotel_id": self.hotel.id}
+        )
+        data = {
+            'imageable_type': 'Hotel',
+            'image': SimpleUploadedFile(
+                name='new_test_hotel.jpg',
+                content=b'\x47\x49\x46\x38',
+                content_type='image/gif'
+            )
+        }
+        for tokens in [self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.post(url, data, format="multipart")
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_any_user_can_list_hotel_images(self):
+        url = reverse("list_hotel_images", kwargs={"hotel_id": self.hotel.id})
+        for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
+                       self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_any_user_can_retrieve_hotel_image(self):
+        url = reverse("retrieve_hotel_image", kwargs={"hotel_id": self.hotel.id, "image_id": self.image1.id})
+        for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
+                       self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["id"], str(self.image1.id))
+
+    def test_any_user_can_not_create_hotel_image_with_invalid_image(self):
+        url = reverse("create_hotel_image", kwargs={"hotel_id": self.hotel.id})
+        data = {
+            'imageable_type': 'Hotel',
+            'image': SimpleUploadedFile(
+                name='test_image.jpg',
+                content=b'test_file_content',
+                content_type='image/jpeg'
+            )
+        }
+
+        for tokens in [self.owner_tokens, self.manager_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.post(url, data, format="multipart")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_only_owner_manager_can_delete_hotel_image(self):
+        images = [self.image1.id, self.image2.id]  
+        users_tokens = [self.manager_tokens, self.owner_tokens]
+        url = reverse("delete_hotel_image", kwargs={"hotel_id": self.hotel.id, "image_id": self.image1.id})
+
+        for image, token in zip(images, users_tokens):
+            url = reverse("delete_hotel_image", kwargs={"hotel_id": self.hotel.id, "image_id": image})
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_any_user_can_not_delete_hotel_image(self):
+        images = [self.image1.id, self.image2.id]  
+        users_tokens = [self.admin_tokens, self.reception_tokens, self.user_tokens]
+        url = reverse("delete_hotel_image", kwargs={"hotel_id": self.hotel.id, "image_id": self.image1.id})
+
+        for image, token in zip(images, users_tokens):
+            url = reverse("delete_hotel_image", kwargs={"hotel_id": self.hotel.id, "image_id": image})
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
+            response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+## Room Image
+    def test_non_owner_manager_cannot_create_room_image(self):
+        url = reverse(
+            "create_room_image",
+            kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id}
+        )
+        data = {
+            'image': SimpleUploadedFile(
+                name='new_test_room.jpg',
+                content=b'\x47\x49\x46\x38',
+                content_type='image/gif'
+            )
+        }
+
+        for tokens in [self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.post(url, data, format="multipart")
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_any_user_can_list_room_images(self):
+        url = reverse("list_room_images", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id})
+        for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
+                       self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data['results'][0]['id'], str(self.Room_image.id))
+
+    def test_any_user_can_retrieve_room_image(self):
+        url = reverse("retrieve_room_image", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id, "image_id": self.Room_image.id})
+        for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
+                       self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["id"], str(self.Room_image.id))
+
+    def test_only_owner_manager_can_delete_room_image(self):
+        images = [self.Room_image.id, self.Room_image2.id]  
+        users_tokens = [self.manager_tokens, self.owner_tokens]
+        
+        for image, token in zip(images, users_tokens):
+            url = reverse("delete_room_image", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id, "image_id": image})
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_any_user_cannot_delete_room_image(self):
+        url = reverse("delete_room_image", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id, "image_id": self.Room_image.id})
+        for tokens in [self.admin_tokens, self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+## Event image
+    def test_any_user_can_list_event_images(self):
+        url = reverse("list_event_images", kwargs={"hotel_id": self.hotel.id, "event_id": self.event1.id})
+        for tokens in [self.owner_tokens, self.manager_tokens, self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(len(response.data) >= 2)
+    
+    def test_any_user_can_retrieve_event_image(self):
+        url = reverse("retrieve_event_image", kwargs={"hotel_id": self.hotel.id, "event_id": self.event1.id, "image_id": self.event_image1.id})
+        for tokens in [self.owner_tokens, self.manager_tokens, self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["id"], str(self.event_image1.id))
+
+    def test_non_owner_manager_cannot_create_event_image(self):
+        url = reverse("create_event_image", kwargs={"hotel_id": self.hotel.id, "event_id": self.event1.id})
+        data = {
+            'image': SimpleUploadedFile(name='new_test.jpg', content=b'\x47\x49\x46\x38', content_type='image/gif')
+        }
+
+        for tokens in [self.reception_tokens, self.user_tokens]:
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+            response = self.client.post(url, data, format="multipart")
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_only_owner_manager_can_delete_event_image(self):
+        images = [self.event_image1.id, self.event_image2.id]  
+        users_tokens = [self.manager_tokens, self.owner_tokens]
+
+        for image, token in zip(images, users_tokens):
+            url = reverse(
+                "delete_event_image",
+                kwargs={"hotel_id": self.hotel.id, "event_id": self.event1.id, "image_id": image}
+            )
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_non_owner_manager_cannot_delete_event_image(self):
+        images = [self.event_image1.id, self.event_image2.id]  
+        users_tokens = [self.reception_tokens, self.user_tokens]
+
+        for image, token in zip(images, users_tokens):
+            url = reverse(
+                "delete_event_image",
+                kwargs={"hotel_id": self.hotel.id, "event_id": self.event1.id, "image_id": image}
+            )
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

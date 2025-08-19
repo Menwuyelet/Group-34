@@ -1,12 +1,19 @@
 from django.shortcuts import render
-from accounts.serializers import StaffSerializer
-from accounts.models import User
+# from accounts.serializers import StaffSerializer
+# from accounts.models import User
 from accounts.permissions import IsReceptionist, IsManagerOfHotel, IsOwnerofHotel, IsAdmin
 from rest_framework import generics, viewsets
-from .serializers import HotelSerializer, RoomSerializer, HotelImageSerializer, EventSerializer, HotelAmenitiesSerializer, RoomAmenitiesSerializer, CitySerializer
-from .models import Hotel, Room, Image, Event, Amenities, City
+from .serializers import( 
+                            HotelSerializer, 
+                            RoomSerializer, 
+                            HotelImageSerializer, 
+                            EventSerializer, 
+                            HotelAmenitiesSerializer, 
+                            RoomAmenitiesSerializer
+                        )
+from .models import Hotel, Room, Image, Event, Amenities
 from rest_framework.permissions import AllowAny
-from rest_framework import serializers
+# from rest_framework import serializers
 # Create your views here.
 
 ## Hotel
@@ -181,8 +188,8 @@ class AmenityViewSets(viewsets.ReadOnlyModelViewSet):
 
 class RoomAmenityCreateView(generics.CreateAPIView):
     serializer_class = RoomAmenitiesSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         hotel_id = self.kwargs.get('hotel_id')
@@ -193,8 +200,8 @@ class RoomAmenityCreateView(generics.CreateAPIView):
 
 class RoomAmenityUpdateView(generics.UpdateAPIView):
     serializer_class = RoomAmenitiesSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'amenity_id'
 
@@ -208,8 +215,8 @@ class RoomAmenityUpdateView(generics.UpdateAPIView):
 
 class RoomAmenityDestroyView(generics.DestroyAPIView):
     serializer_class = RoomAmenitiesSerializer
-    # permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
-    permission_classes = [AllowAny]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    # permission_classes = [AllowAny]
     lookup_url_kwarg = 'amenity_id'
 
     def get_queryset(self):
@@ -225,35 +232,25 @@ class RoomAmenityViewSets(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         hotel_id = self.kwargs.get('hotel_id')
         room_id = self.kwargs.get('room_id')
-        return Amenities.objects.filter(hotel_id=hotel_id, amenityable_id=room_id)
+        return Amenities.objects.filter(hotel_id=hotel_id, amenityable_id=room_id).order_by('name')
 
 ## HotelImage
 
 class HotelImageCreateView(generics.CreateAPIView):
-    serializer_class = HotelImageSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
     # permission_classes = [AllowAny]
+    serializer_class = HotelImageSerializer
+
 
     def perform_create(self, serializer):
-        imageable_type = self.request.data.get('imageable_type')
-        if imageable_type == 'Hotel':
-            hotel_id = self.kwargs.get('hotel_id')
-            hotel = Hotel.objects.get(id=hotel_id)
-            serializer.save(
-                imageable_id=hotel.id,
-                hotel=hotel.id,
-                hotel_name=hotel.name
-            )
-        elif imageable_type == 'Room':
-            room_id = self.kwargs.get('room_id')
-            room = Room.objects.get(id=room_id)
-            serializer.save(
-                imageable_id=room.id,
-                hotel=room.hotel.id,
-                hotel_name=room.hotel.name
-            )
-        else:
-            raise serializers.ValidationError({"imageable_type": "Invalid type"})
+        hotel_id = self.kwargs['hotel_id']
+        hotel = Hotel.objects.get(id=hotel_id)
+        serializer.save(
+            imageable_type='Hotel',
+            imageable_id=hotel_id,
+            hotel=hotel_id,
+            hotel_name=hotel.name
+        )
 
 class HotelImageUpdateView(generics.UpdateAPIView):
     serializer_class = HotelImageSerializer
@@ -286,7 +283,7 @@ class HotelImageViewSets(viewsets.ReadOnlyModelViewSet):
     lookup_url_kwarg = 'image_id' 
     def get_queryset(self):
         hotel_id = self.kwargs.get('hotel_id')  
-        return Image.objects.filter(hotel=hotel_id, imageable_type='Hotel')
+        return Image.objects.filter(hotel=hotel_id, imageable_type='Hotel').order_by('uploaded_at')
 
 ## Room image views
 
@@ -297,7 +294,7 @@ class RoomImageListView(generics.ListAPIView):
     def get_queryset(self):
         hotel_id = self.kwargs['hotel_id']
         room_id = self.kwargs['room_id']
-        return Image.objects.filter(hotel=hotel_id, imageable_id=room_id)
+        return Image.objects.filter(hotel=hotel_id, imageable_id=room_id).order_by('uploaded_at')
 
 class RoomImageDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
@@ -352,7 +349,7 @@ class EventImageListView(generics.ListAPIView):
         hotel_id = self.kwargs['hotel_id']
         event_id = self.kwargs['event_id']
         hotel = Hotel.objects.get(id=hotel_id)
-        return Image.objects.filter(imageable_type='Event', imageable_id=event_id, hotel=hotel_id, hotel_name=hotel.name)
+        return Image.objects.filter(imageable_type='Event', imageable_id=event_id, hotel=hotel_id, hotel_name=hotel.name).order_by("uploaded_at")
 
 class EventImageDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
