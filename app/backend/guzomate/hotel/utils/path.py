@@ -12,6 +12,15 @@ def user_image_upload_path(instance, filename):
     return os.path.join('profile', str(instance.id), filename)
 
 
+def user_id_image_upload_path(instance, filename):
+    """
+    Store user profile images in 'users/<user_id>/<uuid>.ext'
+    """
+    ext = filename.split('.')[-1]
+    timestamp = int(timezone.now().timestamp())
+    filename = f"{timestamp}.{ext}"
+
+    return os.path.join('ID', str(instance.id), filename)
 
 
 def dynamic_upload_path(instance, filename):

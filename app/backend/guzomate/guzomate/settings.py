@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'accounts.apps.AccountsConfig',
     'hotel.apps.HotelConfig',
+    'business.apps.BusinessConfig',
 ]
 
 MIDDLEWARE = [
