@@ -36,7 +36,7 @@ class Booking(models.Model):
     guest_name = models.CharField(max_length=25, null=True, blank=True)
     guest_phone = models.CharField(max_length=15, null=True, blank=True)
     guest_nationality = models.CharField(max_length=15, default="Ethiopian")
-    guest_gender = models.CharField([
+    guest_gender = models.CharField(choices=[
                                     ("Male", "Male"),
                                     ("Female", "Female")
                                     ], 
@@ -60,6 +60,7 @@ class Booking(models.Model):
                                         ('Cancelled', 'Cancelled'),
                                         ('Completed', 'Completed'),
                                     ],
+                                    default='Pending',
                                     null=False, 
                                     blank=False
                             )

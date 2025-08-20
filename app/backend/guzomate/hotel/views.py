@@ -76,8 +76,8 @@ class RoomUpdateView(generics.UpdateAPIView):
         serializer.save() 
 
 class RoomDestroyView(generics.DestroyAPIView):
-    serializer_class = RoomSerializer
     permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = RoomSerializer
     # permission_classes = [AllowAny]
     lookup_url_kwarg = 'room_id' 
     def get_queryset(self):

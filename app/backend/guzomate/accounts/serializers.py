@@ -98,7 +98,6 @@ class StaffSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
             
-
 class GuestSerializer(serializers.ModelSerializer):
     password = serializers.CharField(required=True, write_only=True)
     role = serializers.HiddenField(default='Guest')

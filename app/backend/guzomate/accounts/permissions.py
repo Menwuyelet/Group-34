@@ -12,6 +12,9 @@ class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj == request.user
 
+class IsOwnerOfInstance(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
 
 ## hotel perms
 class IsReceptionist(BasePermission):
@@ -61,6 +64,7 @@ class IsManagerOfHotel(BasePermission):
 
         # 4. Check if the user is in hotel staff
         return hotel.staff_members.filter(id=user.id).exists()
+    
 class IsOwnerofHotel(BasePermission):
     message = "You are not allowed to access this hotel data."
     

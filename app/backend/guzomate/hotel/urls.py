@@ -44,6 +44,7 @@ from .views import (
                     EventImageUpdateView, 
                     EventImageDestroyView
                     )
+from business.views import ReviewCreateView, HotelReviewViewSet, UserBookingCreateView
 
 ## hotel viewSets
 hotel_list = HotelViewSet.as_view({'get': 'list'})
@@ -54,6 +55,9 @@ room_detail = RoomViewSets.as_view({'get': 'retrieve'})
 ## hotelImage viewSets
 hotel_image_list = HotelImageViewSets.as_view({'get': 'list'})
 hotel_image_detail = HotelImageViewSets.as_view({'get': 'retrieve'})
+## hotel review
+review_list = HotelReviewViewSet.as_view({'get': 'list'})
+review_detail = HotelReviewViewSet.as_view({'get': 'retrieve'})
 
 
 urlpatterns = [
@@ -206,6 +210,21 @@ urlpatterns = [
             'hotel/<uuid:hotel_id>/event/<uuid:event_id>/image/<uuid:image_id>/delete/', EventImageDestroyView.as_view(), name='delete_event_image'
         ),
 
+    ## Review
+    path(
+            'hotel/<uuid:hotel_id>/review/create/', ReviewCreateView.as_view(), name='create_review'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/review/list/', review_list, name='hotel_review_list'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/review/<uuid:review_id>/detail/', review_detail, name='hotel_review_detail'
+    ),
+
+    ## Booking
+    path(
+            'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book'
+    ),
 ]
 
 

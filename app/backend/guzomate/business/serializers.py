@@ -1,3 +1,117 @@
+from rest_framework import serializers
+from .models import Review, Booking
+from hotel.models import Hotel
+from accounts.models import User
+import re
+from django.db import transaction
+
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)  # read-only now
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ['id', 'hotel', 'user', 'content', 'rating', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_rating(self, value):
+        if not value:
+            raise serializers.ValidationError({"value": "rating value must be provided."})
+        if value < 0 or value > 5:
+            raise serializers.ValidationError({"value": "value must be between 0 and 5."})
+        return value
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        return Review.objects.create(**validated_data)
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.item():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
+
+
+class BookingSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)
+    room = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = ['id', 'user', 'description', 'hotel', 'room', 'guest_name', 'guest_phone', 'guest_nationality', 'guest_gender', 'number_of_adults', 'number_of_children', 'start_date', 'end_date', 'total_price', 'discount', 'booking_source', 'status', 'payment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'booking_source', 'status', 'payment', 'created_at',  'total_price', 'discount', 'updated_at']
+
+    def validate_phone(self, value):
+        if not re.match(r'^\+?\d{7,15}$', value):
+            raise serializers.ValidationError("Invalid phone number format.")
+        return value
+
+    def validate_user(self, value):
+        try:
+            user = User.objects.get(id=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"User": "the provided user does not exist."})
+        return value
+    
+    def validate_hotel(self, value):
+        try:
+            hotel = Hotel.objects.get(id=value)
+        except Hotel.DoesNotExist:
+            raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
+        return value
+
+    def validate(self, attrs):
+        no_adults = attrs.get('number_of_adults')
+        no_children = attrs.get('number_of_children', 0.0)
+        if no_adults < 0 or no_adults > 50:
+            raise serializers.ValidationError({"Number of adults": "enter valid number of adults."})
+        if no_children < 0 or no_children > 50:
+            raise serializers.ValidationError({"Number of children": "enter valid number of children."})
+        if no_adults == 0 and no_children == 0:
+            raise serializers.ValidationError({"Number of guests": "number of guests mus be greater than zero."})
+
+        return attrs
+    
+
+    @transaction.atomic
+    def create(self, validated_data):
+        start = validated_data['start_date']
+        end = validated_data['end_date']
+        duration = (end - start).days
+        if duration <= 0:
+            raise serializers.ValidationError("End date must be after start date.")
+
+        # Base price from room
+        room = validated_data['room']
+        base_price = room.price_per_night * duration
+
+        # Apply discount if any
+        discount_percent = validated_data.get('discount', 0) or 0
+        total_price = float(base_price) * (1 - discount_percent / 100)
+
+        validated_data['total_price'] = total_price
+        booking = Booking.objects.create(**validated_data)
+        return booking
+    
+
+# class BookingStatusSerializer(serializers.ModelSerializer):
+    
+    # @transaction.atomic
+    # def update(self, instance, validated_data):
+    #     for attr, value in validated_data.item():
+    #         setattr(instance, attr, value)
+        
+    #     instance.save()
+    #     return instance
+
+
+
+
 # class CityImageSerializer(serializers.ModelSerializer):
 #     city = serializers.HiddenField(default=None)
 #     class Meta:
