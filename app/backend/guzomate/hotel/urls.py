@@ -42,9 +42,14 @@ from .views import (
                     EventImageDetailView, 
                     EventImageCreateView,
                     EventImageUpdateView, 
-                    EventImageDestroyView
+                    EventImageDestroyView,
+                    ## Hotel attraction
+                    HotelAttractionCreateView,
+                    HotelAttractionReadOnlyViewSet,
+                    HotelAttractionDestroyView,
+                    HotelAttractionUpdateView,
                     )
-from business.views import ReviewCreateView, HotelReviewViewSet, UserBookingCreateView
+from business.views import ReviewCreateView, HotelReviewViewSet
 
 ## hotel viewSets
 hotel_list = HotelViewSet.as_view({'get': 'list'})
@@ -58,16 +63,20 @@ hotel_image_detail = HotelImageViewSets.as_view({'get': 'retrieve'})
 ## hotel review
 review_list = HotelReviewViewSet.as_view({'get': 'list'})
 review_detail = HotelReviewViewSet.as_view({'get': 'retrieve'})
-
-
+## hotel attraction viewSets
+list_attraction = HotelAttractionReadOnlyViewSet.as_view({'get': 'list'})
+retrieve_attraction = HotelAttractionReadOnlyViewSet.as_view({'get': 'retrieve'})
+## hotel city viewSets
+# list_cities = HotelCityReadonlyViewSet.as_view({'get': 'list'})
+# retrieve_city = HotelCityReadonlyViewSet.as_view({'get': 'retrieve'})
 urlpatterns = [
     ## hotel staff
     path(
-        'hotel/<uuid:hotel_id>/staff/list/', 
+            'hotel/<uuid:hotel_id>/staff/list/', 
             StaffListView.as_view(), name='list_staff'
         ),
     path(
-        'hotel/<uuid:hotel_id>/staff/',
+            'hotel/<uuid:hotel_id>/staff/',
             StaffCreateView.as_view(), name='create_staff'
         ),
     path(
@@ -221,10 +230,35 @@ urlpatterns = [
             'hotel/<uuid:hotel_id>/review/<uuid:review_id>/detail/', review_detail, name='hotel_review_detail'
     ),
 
-    ## Booking
+## hotel attraction
     path(
-            'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book'
-    ),
+            'hotel/<uuid:hotel_id>/attractions/list', list_attraction, name='list_hotel_attractions'
+        ),
+    path(
+            'hotel/<uuid:hotel_id>/attraction/<uuid:attraction_id>/retrieve', retrieve_attraction, name='retrieve_hotel_attraction'
+        ),
+    path(
+            'hotel/<uuid:hotel_id>/attraction/<uuid:attraction_id>/delete', HotelAttractionDestroyView.as_view(), name='delete_hotel_attraction'
+        ),
+    path(
+            'hotel/<uuid:hotel_id>/attraction/create', HotelAttractionCreateView.as_view(), name='create_hotel_attraction'
+        ),
+    path(
+            'hotel/<uuid:hotel_id>/attraction/<uuid:attraction_id>/update', HotelAttractionUpdateView.as_view(), name='update_hotel_attraction'
+        ),
+
+    ## hotel city 
+    # path(
+    #         'hotel/<uuid:hotel_id>/city/create/', HotelCityCreateView.as_view(), name='link_city_and_hotel'
+    # ),
+    # path(   
+    #         'hotel/<uuid:hotel_id>/cities/', list_cities, name='list_hotel_cities'
+    # ),
+
+    ## Booking
+    # path(
+    #         'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book'
+    # ),
 ]
 
 

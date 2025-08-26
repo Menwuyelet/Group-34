@@ -5,8 +5,6 @@ from .models import User
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets 
-from hotel.models import Hotel
-from rest_framework import serializers
 # Create your views here.
 
 class GuestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -39,7 +37,6 @@ class GuestListView(generics.ListAPIView):
         return User.objects.filter(role="Guest")
 
 ## Staff users
-
 class StaffRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
     # permission_classes = [AllowAny]
@@ -57,8 +54,10 @@ class StaffRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
 
 class StaffCreateView(generics.CreateAPIView):
+    # permission_classes = [AllowAny]
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
+
 
     def get_serializer(self, *args, **kwargs):
         hotel_id = self.kwargs.get('hotel_id')
@@ -75,7 +74,6 @@ class StaffListView(generics.ListAPIView):
         return User.objects.filter(role__in=['Manager', 'Receptionist'])
 
 ## owner
-
 class OwnerRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = OwnerAdminSerializer
     permission_classes = [IsAdmin]
@@ -106,7 +104,6 @@ class OwnerListView(generics.ListAPIView):
         return User.objects.filter(role='Owner')
     
 ## Admin
-
 class AdminViewSets(viewsets.ModelViewSet):
     serializer_class = OwnerAdminSerializer
     permission_classes = [IsAdmin]

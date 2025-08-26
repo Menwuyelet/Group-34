@@ -1,6 +1,7 @@
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from .models import Hotel, Location, Event, Room, Amenities, Image
+from business.models import City, HotelCities
 from accounts.models import User
 import os
 
@@ -47,3 +48,19 @@ def delete_image_file(sender, instance, **kwargs):
     if instance.image:
         if os.path.isfile(instance.image.path):
             os.remove(instance.image.path)
+            
+# @receiver(post_save, sender=Hotel)
+# def create_hotel_city(sender, instance, created, **kwargs):
+#     if created and instance.location:
+#         city_name = instance.location.city
+#         if city_name:
+#             try:
+#                 # Find the City with this name
+#                 city = City.objects.get(name=city_name)
+#                 # Create HotelCity entry linking hotel and city
+#                 HotelCities.objects.get_or_create(
+#                     hotel=instance,
+#                     city=city
+#                 )
+#             except City.DoesNotExist:
+#                 raise ValueError({"City": "The city entered doesn't exist."})

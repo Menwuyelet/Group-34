@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.urls import reverse
 from accounts.models import User
-from hotel.models import Hotel, Location, Room, Event, Amenities, Image
+from hotel.models import Hotel, Location, Room, Event, Amenities, Image, HotelAttraction
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 def get_tokens_for_user(user):
@@ -997,3 +997,23 @@ class HotelViewsTest(APITestCase):
             self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    ## attraction
+    # def test_only_admin_can_create_attractions(self):
+
+
+    # def test_owner_can_create_attraction(self):
+    #     user_tokens = [self.owner_tokens, self.manager_tokens]
+    #     url = reverse('list_hotel_attractions')
+    #     data = {
+    #         'attraction': 'test attraction'
+    #     }
+    #     for token in user_tokens:
+    #         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
+    #         respose = self.client.post(url, )
+    #         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    #         self.assertEqual(HotelAttraction.objects.count(), 1)
+    #         self.assertEqual(HotelAttraction.objects.first().hotel, self.hotel)
+
+    # def test_any_user_can_retrieve_hotel_attractions(self):
+    #     url = reverse

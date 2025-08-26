@@ -11,10 +11,10 @@ from .models import (
                        HotelAttraction, 
                        Event
                     )
-from business.models import City
-from accounts.utils.validators import validate_picture
+from business.models import LocalAttraction
 from django.db import transaction
 from accounts.models import User
+from accounts.utils.validators import validate_picture
 
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -255,13 +255,11 @@ class EventSerializer(serializers.ModelSerializer):
         return instance
     
 class HotelAttractionSerializer(serializers.ModelSerializer):
-    hotel = serializers.UUIDField(write_only=True)
-    attraction = serializers.UUIDField(write_only=True)
-
+    hotel = serializers.UUIDField(read_only=True)
     class Meta:
         model = HotelAttraction
         fields = ['id', 'hotel', 'attraction', 'distance']
-        read_only_field = ['id', 'distance']
+        read_only_fields = ['id', 'distance']
 
     def validate_hotel(self, value):
         try:
@@ -272,7 +270,8 @@ class HotelAttractionSerializer(serializers.ModelSerializer):
 
     def validate_attraction(self, value):
         try: 
-            attraction = LocalAttraction.objects.get(id=value)
+            value_id = value.id
+            attraction = LocalAttraction.objects.get(id=value_id)
         except LocalAttraction.DoesNotExist:
              raise serializers.ValidationError({"Attraction": "the attraction you entered doesn't exist."})
         return attraction
@@ -281,6 +280,8 @@ class HotelAttractionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         hotel = validated_data.pop('hotel')
         attraction = validated_data.pop('attraction')
+        attraction_id = attraction.id
+        print(attraction_id)
         hotelAttraction = HotelAttraction.objects.create(hotel=hotel, attraction=attraction, **validated_data)
         return hotelAttraction
     

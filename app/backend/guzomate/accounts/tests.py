@@ -118,7 +118,7 @@ class UserViewsTest(APITestCase):
         response = self.client.post(url_auth, guest_creds, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         guest_token = response.data['access']
-        guest_id = response.data['id']
+        guest_id = response.data['user']['id']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {guest_token}')
 
         url_detail = reverse('retrieve_user', kwargs={"id": guest_id})
@@ -148,7 +148,7 @@ class UserViewsTest(APITestCase):
         }
         response = self.client.post(url_auth, guest_creds, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        guest_id = response.data['id']
+        guest_id = response.data['user']['id']
     
         admin_creds = {
             "email": "admin@example.com",
@@ -189,7 +189,7 @@ class UserViewsTest(APITestCase):
         }
         response = self.client.post(url_auth, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        admin_id= response.data.get('id')
+        admin_id= response.data['user']['id']
         url_detail = reverse('retrieve_user', kwargs={'id': admin_id})
 
         guest_creds = {

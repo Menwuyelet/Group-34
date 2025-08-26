@@ -57,6 +57,7 @@ class Booking(models.Model):
     status = models.CharField(choices=[
                                         ('Pending', 'Pending'),
                                         ('Confirmed', 'Confirmed'),
+                                        ("checked_in", "Checked In"),
                                         ('Cancelled', 'Cancelled'),
                                         ('Completed', 'Completed'),
                                     ],
@@ -70,6 +71,14 @@ class Booking(models.Model):
                                     ],
                                     default="Pending"
                             )
+    payment_method = models.CharField(choices=[
+                                            ("Online", "Online"),
+                                            ("Cash", "Cash"),
+                                            ("Card", "Card"),
+                                            ("None", "None"),
+                                        ],
+                                        default="None"
+                                    )
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
 
@@ -109,8 +118,8 @@ class City(models.Model):
     location = models.OneToOneField(Location, on_delete=models.SET_NULL, blank=False, null=True)
 
     def __str__(self):
-        return f"city_id: {self.id} - city_name: {self.name}"
-    
+        # return f"city_id: {self.id} - city_name: {self.name}"
+        return f"{self.id}"
 class LocalAttraction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.CharField(max_length=20, blank=False, null=False, db_index=True)

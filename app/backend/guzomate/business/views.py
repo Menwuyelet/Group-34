@@ -1,11 +1,11 @@
 from django.shortcuts import render
 from rest_framework import generics, viewsets, serializers
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .serializers import ReviewSerializer, BookingSerializer
-from hotel.models import Hotel, Room
+from .serializers import ReviewSerializer, CitySerializer, CityImageSerializer, LocalAttractionSerializer
+from hotel.models import Hotel, Image
 from accounts.models import User
-from accounts.permissions import IsOwnerOfInstance, IsAdmin
-from .models import Review, Booking
+from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
+from .models import Review, City, LocalAttraction, HotelCities
 
 ## Review
 class ReviewCreateView(generics.CreateAPIView):
@@ -58,112 +58,184 @@ class HotelReviewViewSet(viewsets.ReadOnlyModelViewSet):
         hotel = Hotel.objects.get(id=hotel_id)
         return Review.objects.filter(hotel=hotel)
 
-## Booking 
-
-class UserBookingCreateView(generics.CreateAPIView):
-    serializer_class = BookingSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        # Get hotel and room from URL params or request data
-        hotel_id = self.kwargs.get("hotel_id")
-        room_id = self.kwargs.get("room_id")
-
-        hotel = Hotel.objects.get(id=hotel_id)
-        room = Room.objects.get(id=room_id, hotel=hotel)
-
-        serializer.save(
-            user=self.request.user,
-            hotel=hotel,
-            room=room,
-            booking_source="Online"
-        )
-
-class UserBookingUpdateView(generics.UpdateAPIView):
-    serializer_class = BookingSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOfInstance]
-    lookup_field = 'id'
-    lookup_url_kwarg = 'booking_id'
-
-    def get_queryset(self):
-        return Booking.objects.filter(user=self.request.user)
-
-
-class UserBookingViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
-    serializer_class = BookingSerializer
-    lookup_field = 'id'
-    lookup_url_kwarg = 'booking_id'
-
-    def get_queryset(self):
-        return Booking.objects.filter(user=self.request.user)
-
-
-# class BookingDelete(generics.DestroyAPIView): 
-#     permission_classes = [IsAdmin | IsOwnerOfInstance]
-#     serializer_class = ReviewSerializer
-#     lookup_field = 'id'
-#     lookup_url_kwarg = 'review_id'
-
-#     def get_queryset(self):
-#         user = self.request.user
-#         return Review.objects.filter(user=user)
-
-
-
-
-
-# Create your views here.
 ## City
 
-# class CityCreateView(generics.CreateAPIView):
-#     serializer_class = CitySerializer
-#     permission_classes = [IsAdmin] # change to custom permission if needed
+class CityCreateView(generics.CreateAPIView):
+    serializer_class = CitySerializer
+    permission_classes = [IsAdmin] # change to custom permission if needed
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class CityUpdateView(generics.UpdateAPIView):
+    serializer_class = CitySerializer
+    permission_classes = [IsAdmin]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'city_id'
+
+    def get_queryset(self):
+        return City.objects.all()
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+class CityDestroyView(generics.DestroyAPIView):
+    serializer_class = CitySerializer
+    permission_classes = [IsAdmin]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'city_id'
+
+    def get_queryset(self):
+        return City.objects.all()
+
+class CityViewSets(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CitySerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'city_id'
+
+    def get_queryset(self):
+        return City.objects.all().order_by('name')
+
+## City Image
+class CityImageCreateView(generics.CreateAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = CityImageSerializer
+
+    def perform_create(self, serializer):
+        city_id = self.kwargs['city_id']
+        city = City.objects.get(id=city_id)
+        serializer.save(
+            imageable_type='City',
+            imageable_id=city.id,
+            city=city_id,
+            city_name=city.name
+        )
+
+class CityImageReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CityImageSerializer
+    permission_classes = [AllowAny]
+    lookup_field = "id"
+    lookup_url_kwarg = "image_id"
+
+    def get_queryset(self):
+        city_id = self.kwargs['city_id']
+        city = City.objects.get(id=city_id)
+        return Image.objects.filter(
+            imageable_type='City',
+            imageable_id=city_id,
+            city=city_id,
+            city_name=city.name
+        ).order_by("uploaded_at")
+    
+class CityImageUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = CityImageSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "image_id"
+
+    def get_queryset(self):
+        city_id = self.kwargs['city_id']
+        return Image.objects.filter(
+            city=city_id,
+            imageable_id=city_id,
+            imageable_type='City'
+        )
+    
+class CityImageDestroyView(generics.DestroyAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = CityImageSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "image_id"
+
+    def get_queryset(self):
+        city_id = self.kwargs['city_id']
+        return Image.objects.filter(
+            city=city_id,
+            imageable_id=city_id,
+            imageable_type='City'
+        )
+
+# ## Local Attractions
+class LocalAttractionCreateView(generics.CreateAPIView):
+    permission_classes = [IsAdmin]
+    # permission_classes = [AllowAny]
+    serializer_class = LocalAttractionSerializer
+
+    def perform_create(self, serializer):
+        city_id = self.kwargs.get('city_id')
+        city = City.objects.get(id=city_id)
+        serializer.save(city=city)
+
+class LocalAttractionUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAdmin]
+    # permission_classes = [AllowAny]
+    serializer_class = LocalAttractionSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = "attraction_id"
+
+    def get_queryset(self):
+        city_id = self.kwargs.get('city_id')
+        attraction_id = self.kwargs.get('attraction_id')
+        return LocalAttraction.objects.filter(city=city_id, id=attraction_id)
+
+class LocalAttractionDestroyView(generics.DestroyAPIView):
+    permission_classes = [IsAdmin]
+    serializer_class = LocalAttractionSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = "attraction_id"
+
+    def get_queryset(self):
+        city_id = self.kwargs.get('city_id')
+        attraction_id = self.kwargs.get('attraction_id')
+        return LocalAttraction.objects.filter(city=city_id, id=attraction_id)
+
+class CityLocalAttractionReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = LocalAttractionSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'id'
+    lookup_url_kwarg = "attraction_id"
+
+    def get_queryset(self):
+        city_id = self.kwargs['city_id']
+        return LocalAttraction.objects.filter(city=city_id).order_by("name")
+
+# class HotelCityCreateView(generics.CreateAPIView):
+#     permission_classes = [IsAdmin]
+#     serializer_class = HotelCitiesSerializers
 
 #     def perform_create(self, serializer):
-#         serializer.save()
+#         hotel_id = self.kwargs.get('hotel_id')
+#         serializer.save(hotel=hotel_id)
 
-# class CityUpdateView(generics.UpdateAPIView):
-#     serializer_class = CitySerializer
+# class HotelCityUpdateView(generics.UpdateAPIView):
 #     permission_classes = [IsAdmin]
-#     lookup_field = 'id'
-#     lookup_url_kwarg = 'city_id'
+#     serializer_class = HotelCitiesSerializers
 
 #     def get_queryset(self):
-#         return City.objects.all()
+#         hotel_id = self.kwargs.get('hotel_id')
+#         hotel = Hotel.objects.get(id=hotel_id)
+#         city_id = self.kwargs.get('city_id')
+#         city = City.objects.get(id=city_id)
+#         return HotelCities.objects.filter(hotel=hotel, city=city)
 
-#     def perform_update(self, serializer):
-#         serializer.save()
-
-# class CityDestroyView(generics.DestroyAPIView):
-#     serializer_class = CitySerializer
+# class HotelCityDestroyView(generics.DestroyAPIView):
 #     permission_classes = [IsAdmin]
+#     serializer_class = HotelCitiesSerializers
+
+#     def get_queryset(self):
+#         hotel_id = self.kwargs.get('hotel_id')
+#         hotel = Hotel.objects.get(id=hotel_id)
+#         city_id = self.kwargs.get('city_id')
+#         city = City.objects.get(id=city_id)
+#         return HotelCities.objects.filter(hotel=hotel, city=city)
+    
+# class HotelCityReadonlyViewSet(viewsets.ReadOnlyModelViewSet):
+#     permission_classes = [AllowAny]
+#     serializer_class = HotelCitiesSerializers
 #     lookup_field = 'id'
-#     lookup_url_kwarg = 'city_id'
+#     lookup_url_kwarg = "hotelCity_id"
 
 #     def get_queryset(self):
-#         return City.objects.all()
-
-# class CityListView(generics.ListAPIView):
-#     serializer_class = CitySerializer
-#     permission_classes = [AllowAny]
-
-#     def get_queryset(self):
-#         return City.objects.all()
-
-# class CityDetailView(generics.RetrieveAPIView):
-#     serializer_class = CitySerializer
-#     permission_classes = [AllowAny]
-#     lookup_field = 'id'
-#     lookup_url_kwarg = 'city_id'
-
-#     def get_queryset(self):
-#         return City.objects.all()
-
-# class CityViewSets(viewsets.ReadOnlyModelViewSet):
-#     serializer_class = CitySerializer
-#     permission_classes = [AllowAny]
-#     lookup_url_kwarg = 'city_id'
-
-#     def get_queryset(self):
-#         return City.objects.all()
+#         hotel_id = self.kwargs['hotel_id']
+#         return HotelCities.objects.filter(hotel=hotel_id).order_by('city')

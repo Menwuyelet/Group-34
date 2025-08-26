@@ -9,9 +9,11 @@ from .serializers import(
                             HotelImageSerializer, 
                             EventSerializer, 
                             HotelAmenitiesSerializer, 
-                            RoomAmenitiesSerializer
+                            RoomAmenitiesSerializer,
+                            HotelAttractionSerializer
                         )
-from .models import Hotel, Room, Image, Event, Amenities
+from .models import Hotel, Room, Image, Event, Amenities, HotelAttraction
+from business.models import LocalAttraction
 from rest_framework.permissions import AllowAny
 # from rest_framework import serializers
 # Create your views here.
@@ -19,6 +21,7 @@ from rest_framework.permissions import AllowAny
 ## Hotel
 class HotelCreateView(generics.CreateAPIView):
     serializer_class = HotelSerializer
+    # permission_classes = [AllowAny]
     permission_classes = [IsAdmin]
 
     def perform_create(self, serializer):
@@ -400,3 +403,53 @@ class EventImageDestroyView(generics.DestroyAPIView):
         event_id = self.kwargs['event_id']
         return Image.objects.filter(hotel=hotel_id, imageable_id=event_id, imageable_type='Event')
 
+# Hotel Attractions 
+
+class HotelAttractionReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = HotelAttractionSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'id'
+    lookup_url_kwarg = "attraction_id"
+
+    def get_queryset(self):
+        hotel_id = self.kwargs.get('hotel_id')
+        return HotelAttraction.objects.filter(
+            hotel_id=hotel_id
+        ).order_by("id")
+
+class HotelAttractionCreateView(generics.CreateAPIView):
+    permission_classes = [AllowAny | IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = HotelAttractionSerializer
+
+    def perform_create(self, serializer):
+        hotel_id = self.kwargs.get('hotel_id')
+        hotel = Hotel.objects.get(id=hotel_id)
+        serializer.save(hotel=hotel)
+
+class HotelAttractionUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = HotelAttractionSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = "attraction_id"
+
+    def get_queryset(self):
+        hotel_id = self.kwargs.get('hotel_id')
+        attraction_id = self.kwargs.get('attraction_id')
+        return HotelAttraction.objects.filter(
+            hotel=hotel_id,
+            attraction=attraction_id
+        )
+
+class HotelAttractionDestroyView(generics.DestroyAPIView):
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = HotelAttractionSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "attraction_id"
+
+    def get_queryset(self):
+        hotel_id = self.kwargs.get('hotel_id')
+        attraction_id = self.kwargs.get('attraction_id')
+        return HotelAttraction.objects.filter(
+            hotel=hotel_id,
+            attraction=attraction_id
+        )
