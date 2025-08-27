@@ -49,7 +49,7 @@ from .views import (
                     HotelAttractionDestroyView,
                     HotelAttractionUpdateView,
                     )
-from business.views import ReviewCreateView, HotelReviewViewSet
+from business.views import ReviewCreateView, HotelReviewViewSet, HotelCityCreateView, HotelCityListView, HotelCityUpdateView, HotelCityDestroyView
 
 ## hotel viewSets
 hotel_list = HotelViewSet.as_view({'get': 'list'})
@@ -248,13 +248,18 @@ urlpatterns = [
         ),
 
     ## hotel city 
-    # path(
-    #         'hotel/<uuid:hotel_id>/city/create/', HotelCityCreateView.as_view(), name='link_city_and_hotel'
-    # ),
-    # path(   
-    #         'hotel/<uuid:hotel_id>/cities/', list_cities, name='list_hotel_cities'
-    # ),
-
+    path(
+            'hotel/<uuid:hotel_id>/city/create/', HotelCityCreateView.as_view(), name='link_city_and_hotel'
+    ),
+    path(   
+            'hotel/<uuid:hotel_id>/cities/', HotelCityListView.as_view(), name='list_hotel_cities'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/city/<uuid:hotel_city_id>/delete/', HotelCityDestroyView.as_view(), name='delete_hotel_city'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/city/<uuid:hotel_city_id>/update/', HotelCityUpdateView.as_view() , name='update_hotel_city'
+    ),
     ## Booking
     # path(
     #         'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book'

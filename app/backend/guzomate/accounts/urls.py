@@ -25,7 +25,10 @@ from business.views import (
                                 LocalAttractionDestroyView,
                                 LocalAttractionUpdateView,
                                 LocalAttractionCreateView,
-                                CityLocalAttractionReadOnlyViewSet
+                                CityLocalAttractionReadOnlyViewSet,
+                                FavoriteCreateView,
+                                FavoriteReadOnlyViewSets,
+                                FavoriteDestroyView
                             )
 
 
@@ -60,6 +63,9 @@ city_image_detail = CityImageReadOnlyViewSet.as_view({'get': 'retrieve'})
 local_attraction_list = CityLocalAttractionReadOnlyViewSet.as_view({'get': 'list'})
 local_attraction_retrieve = CityLocalAttractionReadOnlyViewSet.as_view({'get': 'retrieve'})
 
+list_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'list'})
+retrieve_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'retrieve'})
+
 urlpatterns = [
     ## auth
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -77,6 +83,11 @@ urlpatterns = [
     path('guest/city/<uuid:city_id>/image/<uuid:image_id>/retrieve/', city_image_detail, name='city_image_retrieve'),
     path('guest/city/<uuid:city_id>/attractions/list/', local_attraction_list, name='list_city_attractions'),
     path('guest/city/<uuid:city_id>/attraction/detail/', local_attraction_retrieve, name='retrieve_city_attractions'),
+    ## Favorite
+    path('hotel/<uuid:hotel_id>/favorite/create/', FavoriteCreateView.as_view(), name='create_favorite'),
+    path('guest/<uuid:id>/favorite/<uuid:favorite_id>', retrieve_favorite, name='retrieve_guest_favorite'),
+    path('guest/<uuid:id>/favorite/<uuid:favorite_id>/delete/', FavoriteDestroyView.as_view(), name='delete_guest_favorite'),  
+    path('guest/<uuid:id>/favorites/', list_favorite, name='list_guest_favorites'),
 
    
     # path('guest/<uuid:id>/bookings/list', booking_list, name='user_booking_list'),

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Review, City, LocalAttraction, HotelCities
+from .models import Review, City, LocalAttraction, HotelCities, Favorite
 from hotel.models import Hotel, Location, Image
 from hotel.serializers import LocationSerializer
 from django.db import transaction
@@ -131,39 +131,56 @@ class LocalAttractionSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
-# class HotelCitiesSerializers(serializers.ModelSerializer):
-#     hotel = serializers.UUIDField(read_only=True)
-#     class Meta:
-#         model = HotelCities
-#         fields = ['id', 'city', 'hotel']
-#         read_only_fields = ['id']
+class HotelCitiesSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = HotelCities
+        exclude = ["hotel"]
+        read_only_fields = ['id']
 
 
-#     def validate_city(self, value):
-#         try:
-#             city = City.objects.get(id=value)
-#         except Hotel.DoesNotExist:
-#             raise serializers.ValidationError({"City": "the City you entered doesn't exist."})
-#         return city
+    def validate_city(self, value):
+        try:
+            city = City.objects.get(id=value.id)
+        except Hotel.DoesNotExist:
+            raise serializers.ValidationError({"City": "the City you entered doesn't exist."})
+        return city
     
-#     def validate_hotel(self, value):
-#         try:
-#             hotel = Hotel.objects.get(id=value)
-#         except Hotel.DoesNotExist:
-#             raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
-#         return value
+    def validate_hotel(self, value):
+        try:
+            hotel = Hotel.objects.get(id=value)
+        except Hotel.DoesNotExist:
+            raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
+        return value
     
-#     @transaction.atomic
-#     def create(self, validated_data):
-#         city = validated_data.pop('city')
-#         hotel_id = validated_data.pop('hotel')
-#         hotel = Hotel.objects.get(id=hotel_id)
-#         hotelCity = HotelCities.objects.create(city=city, hotel=hotel, **validated_data)
-#         return hotelCity
+    @transaction.atomic
+    def create(self, validated_data):
+        city = validated_data.pop('city')
+        hotel_id = validated_data.pop('hotel')
+        hotel = Hotel.objects.get(id=hotel_id)
+        hotelCity = HotelCities.objects.create(city=city, hotel=hotel, **validated_data)
+        return hotelCity
     
-#     @transaction.atomic
-#     def update(self, instance, validated_data):
-#         for attr, value in validated_data.items():
-#             setattr(instance, attr, value)
-#         instance.save()
-#         return instance
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    hotel = serializers.PrimaryKeyRelatedField(read_only=True)
+    class Meta:
+        model = Favorite
+        exclude = ['user']
+        read_only_fields = ['id', 'created_at']
+
+    def create(self, validated_data):
+        favorite = Favorite.objects.create(**validated_data)
+        return favorite
+    
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+

@@ -1,11 +1,10 @@
 from django.shortcuts import render
-from rest_framework import generics, viewsets, serializers
+from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .serializers import ReviewSerializer, CitySerializer, CityImageSerializer, LocalAttractionSerializer
+from .serializers import ReviewSerializer, CitySerializer, CityImageSerializer, LocalAttractionSerializer, HotelCitiesSerializers, FavoriteSerializer
 from hotel.models import Hotel, Image
-from accounts.models import User
 from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
-from .models import Review, City, LocalAttraction, HotelCities
+from .models import Review, City, LocalAttraction, HotelCities, Favorite
 
 ## Review
 class ReviewCreateView(generics.CreateAPIView):
@@ -59,7 +58,6 @@ class HotelReviewViewSet(viewsets.ReadOnlyModelViewSet):
         return Review.objects.filter(hotel=hotel)
 
 ## City
-
 class CityCreateView(generics.CreateAPIView):
     serializer_class = CitySerializer
     permission_classes = [IsAdmin] # change to custom permission if needed
@@ -156,7 +154,7 @@ class CityImageDestroyView(generics.DestroyAPIView):
             imageable_type='City'
         )
 
-# ## Local Attractions
+## Local Attractions
 class LocalAttractionCreateView(generics.CreateAPIView):
     permission_classes = [IsAdmin]
     # permission_classes = [AllowAny]
@@ -200,42 +198,74 @@ class CityLocalAttractionReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
         city_id = self.kwargs['city_id']
         return LocalAttraction.objects.filter(city=city_id).order_by("name")
 
-# class HotelCityCreateView(generics.CreateAPIView):
-#     permission_classes = [IsAdmin]
-#     serializer_class = HotelCitiesSerializers
+## Hotel City
+class HotelCityCreateView(generics.CreateAPIView):
+    permission_classes = [IsAdmin | IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = HotelCitiesSerializers
 
-#     def perform_create(self, serializer):
-#         hotel_id = self.kwargs.get('hotel_id')
-#         serializer.save(hotel=hotel_id)
+    def perform_create(self, serializer):
+        hotel_id = self.kwargs.get('hotel_id')
+        serializer.save(hotel=hotel_id)
 
-# class HotelCityUpdateView(generics.UpdateAPIView):
-#     permission_classes = [IsAdmin]
-#     serializer_class = HotelCitiesSerializers
+class HotelCityUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAdmin | IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = HotelCitiesSerializers
+    lookup_field = 'id'
+    lookup_url_kwarg = "hotel_city_id"
 
-#     def get_queryset(self):
-#         hotel_id = self.kwargs.get('hotel_id')
-#         hotel = Hotel.objects.get(id=hotel_id)
-#         city_id = self.kwargs.get('city_id')
-#         city = City.objects.get(id=city_id)
-#         return HotelCities.objects.filter(hotel=hotel, city=city)
+    def get_queryset(self):
+        return HotelCities.objects.all()
 
-# class HotelCityDestroyView(generics.DestroyAPIView):
-#     permission_classes = [IsAdmin]
-#     serializer_class = HotelCitiesSerializers
+class HotelCityDestroyView(generics.DestroyAPIView):
+    permission_classes = [IsAdmin | IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = HotelCitiesSerializers
+    lookup_field = 'id'
+    lookup_url_kwarg = "hotel_city_id"
 
-#     def get_queryset(self):
-#         hotel_id = self.kwargs.get('hotel_id')
-#         hotel = Hotel.objects.get(id=hotel_id)
-#         city_id = self.kwargs.get('city_id')
-#         city = City.objects.get(id=city_id)
-#         return HotelCities.objects.filter(hotel=hotel, city=city)
+    def get_queryset(self):
+        return HotelCities.objects.all()
     
-# class HotelCityReadonlyViewSet(viewsets.ReadOnlyModelViewSet):
-#     permission_classes = [AllowAny]
-#     serializer_class = HotelCitiesSerializers
-#     lookup_field = 'id'
-#     lookup_url_kwarg = "hotelCity_id"
+class HotelCityListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = HotelCitiesSerializers
+    lookup_field = 'id'
+    lookup_url_kwarg = "hotel_id"
 
-#     def get_queryset(self):
-#         hotel_id = self.kwargs['hotel_id']
-#         return HotelCities.objects.filter(hotel=hotel_id).order_by('city')
+    def get_queryset(self):
+        hotel_id = self.kwargs.get('hotel_id')
+        return HotelCities.objects.filter(hotel=hotel_id).order_by('city')
+
+## Guest Favorite 
+class FavoriteCreateView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = FavoriteSerializer
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        hotel = self.kwargs.get('hotel_id')
+        return serializer.save(hotel=hotel, user=user)
+
+class FavoriteReadOnlyViewSets(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAdmin | IsOwnerOfInstance]
+    serializer_class = FavoriteSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'favorite_id'
+
+    def get_queryset(self):
+        user = self.request.user
+        favorite_id = self.kwargs.get('favorite_id', None)
+        if favorite_id:
+            return Favorite.objects.filter(user=user, id=favorite_id)
+        return Favorite.objects.filter(user=user).order_by('created_at')
+
+class FavoriteDestroyView(generics.DestroyAPIView):
+    permission_classes = [IsOwnerOfInstance]
+    serializer_class = FavoriteSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'favorite_id'
+
+    def get_queryset(self):
+        user = self.request.user
+        favorite_id = self.kwargs.get('favorite_id')
+        return Favorite.objects.filter(user=user, id=favorite_id)
+        

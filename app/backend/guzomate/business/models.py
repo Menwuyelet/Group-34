@@ -118,8 +118,7 @@ class City(models.Model):
     location = models.OneToOneField(Location, on_delete=models.SET_NULL, blank=False, null=True)
 
     def __str__(self):
-        # return f"city_id: {self.id} - city_name: {self.name}"
-        return f"{self.id}"
+        return f"city_id: {self.id} - city_name: {self.name}"
 class LocalAttraction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.CharField(max_length=20, blank=False, null=False, db_index=True)
