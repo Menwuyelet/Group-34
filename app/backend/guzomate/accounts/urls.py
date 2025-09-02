@@ -28,7 +28,9 @@ from business.views import (
                                 CityLocalAttractionReadOnlyViewSet,
                                 FavoriteCreateView,
                                 FavoriteReadOnlyViewSets,
-                                FavoriteDestroyView
+                                FavoriteDestroyView,
+                                UserBookingReadOnlyViewSet,
+                                UserBookingUpdateView
                             )
 
 
@@ -66,6 +68,9 @@ local_attraction_retrieve = CityLocalAttractionReadOnlyViewSet.as_view({'get': '
 list_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'list'})
 retrieve_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'retrieve'})
 
+booking_list = UserBookingReadOnlyViewSet.as_view({'get': 'list'})
+booking_detail = UserBookingReadOnlyViewSet.as_view({'get': 'detail'})
+
 urlpatterns = [
     ## auth
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -89,10 +94,10 @@ urlpatterns = [
     path('guest/<uuid:id>/favorite/<uuid:favorite_id>/delete/', FavoriteDestroyView.as_view(), name='delete_guest_favorite'),  
     path('guest/<uuid:id>/favorites/', list_favorite, name='list_guest_favorites'),
 
-   
-    # path('guest/<uuid:id>/bookings/list', booking_list, name='user_booking_list'),
-    # path('guest/<uuid:id>/booking/<uuid:booking_id>', booking_detail, name='user_booking_detail'),
-    # path('guest/<uuid:id>/booking/<uuid:booking_id>/update/', UserBookingUpdateView.as_view(), name='update_user_booking'),
+    ## Booking
+    path('guest/<uuid:id>/bookings/list', booking_list, name='user_booking_list'),
+    path('guest/<uuid:id>/booking/<uuid:booking_id>', booking_detail, name='user_booking_detail'),
+    path('guest/<uuid:id>/booking/<uuid:booking_id>/update/', UserBookingUpdateView.as_view(), name='update_user_booking'),
     
     ## admin
     path('admin/', include(router.urls)),

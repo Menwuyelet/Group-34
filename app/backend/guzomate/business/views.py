@@ -1,10 +1,18 @@
 from django.shortcuts import render
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .serializers import ReviewSerializer, CitySerializer, CityImageSerializer, LocalAttractionSerializer, HotelCitiesSerializers, FavoriteSerializer
-from hotel.models import Hotel, Image
+from .serializers import (
+                            ReviewSerializer, 
+                            CitySerializer, 
+                            CityImageSerializer, 
+                            LocalAttractionSerializer, 
+                            HotelCitiesSerializers, 
+                            FavoriteSerializer,
+                            BookingSerializer
+                        )
+from hotel.models import Hotel, Image, Room
 from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
-from .models import Review, City, LocalAttraction, HotelCities, Favorite
+from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking
 
 ## Review
 class ReviewCreateView(generics.CreateAPIView):
@@ -269,3 +277,47 @@ class FavoriteDestroyView(generics.DestroyAPIView):
         favorite_id = self.kwargs.get('favorite_id')
         return Favorite.objects.filter(user=user, id=favorite_id)
         
+
+## Booking
+
+
+class UserBookingCreateView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    # permission_classes = [AllowAny]
+    serializer_class = BookingSerializer
+
+    def perform_create(self, serializer):
+        # Get hotel and room from URL params or request data
+        hotel_id = self.kwargs.get("hotel_id")
+        room_id = self.kwargs.get("room_id")
+
+        hotel = Hotel.objects.get(id=hotel_id)
+        room = Room.objects.get(id=room_id, hotel=hotel)
+
+        serializer.save(
+            user=self.request.user,
+            hotel=hotel,
+            room=room,
+            booking_source="Online"
+        )
+
+class UserBookingUpdateView(generics.UpdateAPIView):
+    # permission_classes = [IsAuthenticated, IsOwnerOfInstance]
+    parser_classes = [AllowAny]
+    serializer_class = BookingSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'booking_id'
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user)
+
+
+class UserBookingReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    # permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
+    parser_classes = [AllowAny]
+    serializer_class = BookingSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'booking_id'
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user)
