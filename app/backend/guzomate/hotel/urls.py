@@ -265,15 +265,3 @@ urlpatterns = [
     #         'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book'
     # ),
 ]
-
-
-## the url for the viewset of the rooms in the hotel
-
-
-# urlpatterns = [
-#     # list all rooms for a hotel
-#     path('hotels/<uuid:hotel_id>/rooms/', room_list, name='hotel-rooms'),
-    
-#     # detail for a single room in a hotel
-#     path('hotels/<uuid:hotel_id>/rooms/<uuid:pk>/', room_detail, name='hotel-room-detail'),
-# ]

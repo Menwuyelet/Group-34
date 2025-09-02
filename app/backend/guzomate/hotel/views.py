@@ -1,6 +1,4 @@
 from django.shortcuts import render
-# from accounts.serializers import StaffSerializer
-# from accounts.models import User
 from accounts.permissions import IsReceptionist, IsManagerOfHotel, IsOwnerofHotel, IsAdmin
 from rest_framework import generics, viewsets
 from .serializers import( 
@@ -13,9 +11,7 @@ from .serializers import(
                             HotelAttractionSerializer
                         )
 from .models import Hotel, Room, Image, Event, Amenities, HotelAttraction
-from business.models import LocalAttraction
 from rest_framework.permissions import AllowAny
-# from rest_framework import serializers
 # Create your views here.
 
 ## Hotel
@@ -190,8 +186,8 @@ class AmenityViewSets(viewsets.ReadOnlyModelViewSet):
 ## Room Amenities
 
 class RoomAmenityCreateView(generics.CreateAPIView):
-    serializer_class = RoomAmenitiesSerializer
     permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = RoomAmenitiesSerializer
     # permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
@@ -202,8 +198,8 @@ class RoomAmenityCreateView(generics.CreateAPIView):
         serializer.save(hotel=hotel, amenityable_id=room,  amenityable_type="Room" )
 
 class RoomAmenityUpdateView(generics.UpdateAPIView):
-    serializer_class = RoomAmenitiesSerializer
     permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = RoomAmenitiesSerializer
     # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'amenity_id'
@@ -217,8 +213,8 @@ class RoomAmenityUpdateView(generics.UpdateAPIView):
         serializer.save()
 
 class RoomAmenityDestroyView(generics.DestroyAPIView):
-    serializer_class = RoomAmenitiesSerializer
     permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
+    serializer_class = RoomAmenitiesSerializer
     # permission_classes = [AllowAny]
     lookup_url_kwarg = 'amenity_id'
 
@@ -228,8 +224,8 @@ class RoomAmenityDestroyView(generics.DestroyAPIView):
         return Amenities.objects.filter(hotel_id=hotel_id, amenityable_id=room_id)
 
 class RoomAmenityViewSets(viewsets.ReadOnlyModelViewSet):
-    serializer_class = RoomAmenitiesSerializer
     permission_classes = [AllowAny]
+    serializer_class = RoomAmenitiesSerializer
     lookup_url_kwarg = 'amenity_id'
 
     def get_queryset(self):
@@ -418,7 +414,7 @@ class HotelAttractionReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by("id")
 
 class HotelAttractionCreateView(generics.CreateAPIView):
-    permission_classes = [AllowAny | IsOwnerofHotel | IsManagerOfHotel]
+    permission_classes = [IsOwnerofHotel | IsManagerOfHotel]
     serializer_class = HotelAttractionSerializer
 
     def perform_create(self, serializer):
@@ -437,7 +433,7 @@ class HotelAttractionUpdateView(generics.UpdateAPIView):
         attraction_id = self.kwargs.get('attraction_id')
         return HotelAttraction.objects.filter(
             hotel=hotel_id,
-            attraction=attraction_id
+            id = attraction_id
         )
 
 class HotelAttractionDestroyView(generics.DestroyAPIView):
@@ -451,5 +447,5 @@ class HotelAttractionDestroyView(generics.DestroyAPIView):
         attraction_id = self.kwargs.get('attraction_id')
         return HotelAttraction.objects.filter(
             hotel=hotel_id,
-            attraction=attraction_id
+            id = attraction_id
         )

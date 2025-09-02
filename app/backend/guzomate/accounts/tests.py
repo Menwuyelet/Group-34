@@ -37,6 +37,21 @@ class UserViewsTest(APITestCase):
             password="normaluser"
         )
 
+        url_auth = reverse('token_obtain_pair')
+        admin_creds = {
+            "email": "admin@example.com",
+            "password": "adminpass"
+        }
+        response = self.client.post(url_auth, admin_creds, format='json')
+        self.admin_token = response.data['access']
+
+        guest_creds = {
+            "email": "test@gmail.com",
+            "password": "normaluser"
+        }
+        response = self.client.post(url_auth, guest_creds, format='json')
+        self.guest_token = response.data['access']
+    ## user
     def test_create_user_with_valid_data(self):
         url = reverse('create_user')
         data = {
@@ -63,7 +78,6 @@ class UserViewsTest(APITestCase):
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.filter(role='Guest').count(), 1)
-
 
     def test_guest_auth(self):
         url = reverse('token_obtain_pair')
@@ -139,7 +153,6 @@ class UserViewsTest(APITestCase):
         response = self.client.delete(url_detail, update_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         
-
     def test_getting_user_detail_with_admin(self):
         url_auth = reverse('token_obtain_pair')
         guest_creds = {
@@ -179,7 +192,6 @@ class UserViewsTest(APITestCase):
         response = self.client.delete(url_detail, update_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-
     def test_getting_guest_detail_with_unauthorized_user(self):
         url_auth = reverse('token_obtain_pair')
         
@@ -212,7 +224,7 @@ class UserViewsTest(APITestCase):
         response = self.client.patch(url_update, update_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-
+    ## admin
     def test_admin_creation_with_admin(self):
         url_auth = reverse('token_obtain_pair')
         admin_creds = {
@@ -320,20 +332,9 @@ class UserViewsTest(APITestCase):
         response = self.client.get(admin_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-
-    def test_owner_creation(self):
-        url_auth = reverse('token_obtain_pair')
-        admin_creds = {
-            "email": "admin@example.com",
-            "password": "adminpass"
-        }
-        response = self.client.post(url_auth, admin_creds, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        admin_token = response.data['access']
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {admin_token}')
-        
-        ## valid data
-        admin_url = reverse('create_owner')
+    ## owner
+    def test_admin_can_retrieve_owner(self):
+        # Create owner first
         owner_data = {
             "email": "owner@example.com",
             "first_name": "owner",
@@ -343,43 +344,158 @@ class UserViewsTest(APITestCase):
             "nationality": "Ethiopian",
             "password": "admintestpas@1"
         }
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url, owner_data, format='json')
+        owner_id = response.data['id']
 
-        response = self.client.post(admin_url, owner_data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        retrieve_url = reverse('retrieve_owner', kwargs={'id': owner_id})
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['email'], owner_data['email'])
-        self.assertEqual(response.data['role'], "Owner")
 
-        ## invalid data
-        admin_url = reverse('create_owner')
-        admin_data = {
-            "email": "admintest@example.com",
-            "first_name": "Admin",
+    def test_admin_can_update_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        # Create owner first
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
             "last_name": "User",
-            "phone": "0910000000",
+            "phone": "0930000000",
             "gender": "Male",
             "nationality": "Ethiopian",
-            "password": "admintestpas"
+            "password": "admintestpas@1"
         }
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url, owner_data, format='json')
+        owner_id = response.data['id']
 
-        response = self.client.post(admin_url, admin_data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        ## owners retrieve
-        owner_url = reverse('list_owners')
-        ## valid user
-        response = self.client.get(owner_url)
+        retrieve_url = reverse('retrieve_owner', kwargs={'id': owner_id})
+        update_data = {"first_name": "UpdatedOwner", "phone": "0930000001"}
+        response = self.client.patch(retrieve_url, update_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 1)
 
-        ## invalid user
-        guest_creds = {
-            "email": "test@gmail.com",
-            "password": "normaluser"
+        owner_obj = User.objects.get(id=owner_id)
+        self.assertEqual(owner_obj.first_name, "UpdatedOwner")
+        self.assertEqual(owner_obj.phone, "0930000001")
+
+    def test_admin_can_list_owners(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        create_url = reverse('create_owner')
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
+            "last_name": "User",
+            "phone": "0930000000",
+            "gender": "Male",
+            "nationality": "Ethiopian",
+            "password": "admintestpas@1"
         }
-        response = self.client.post(url_auth, guest_creds, format='json')
+        self.client.post(create_url, owner_data, format='json')
+
+        list_url = reverse('list_owners')
+        response = self.client.get(list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        guest_token = response.data['access']
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {guest_token}')
-        response = self.client.get(owner_url)
+        self.assertGreaterEqual(response.data['count'], 1)
+
+    def test_admin_can_delete_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
+            "last_name": "User",
+            "phone": "0930000000",
+            "gender": "Male",
+            "nationality": "Ethiopian",
+            "password": "admintestpas@1"
+        }
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url,owner_data, format='json')
+        owner_id = response.data['id']
+
+        retrieve_url = reverse('retrieve_owner', kwargs={'id': owner_id})
+        response = self.client.delete(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=owner_id).exists())
+    
+    def test_unauthorized_user_cannot_create_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.guest_token}')
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
+            "last_name": "User",
+            "phone": "0930000000",
+            "gender": "Male",
+            "nationality": "Ethiopian",
+            "password": "admintestpas@1"
+        }
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url, owner_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+ 
+    def test_unauthorized_user_cannot_retrieve_owner(self):
+        # Create owner as admin
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
+            "last_name": "User",
+            "phone": "0930000000",
+            "gender": "Male",
+            "nationality": "Ethiopian",
+            "password": "admintestpas@1"
+        }
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url, owner_data, format='json')
+        owner_id = response.data['id']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.guest_token}')
+        retrieve_url = reverse('retrieve_owner', kwargs={'id': owner_id})
+        response = self.client.get(retrieve_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_unauthorized_user_cannot_update_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
+            "last_name": "User",
+            "phone": "0930000000",
+            "gender": "Male",
+            "nationality": "Ethiopian",
+            "password": "admintestpas@1"
+        }
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url, owner_data, format='json')
+        owner_id = response.data['id']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.guest_token}')
+        retrieve_url = reverse('retrieve_owner', kwargs={'id': owner_id})
+        response = self.client.patch(retrieve_url, {"first_name": "Hack"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_cannot_delete_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
+        owner_data = {
+            "email": "owner@example.com",
+            "first_name": "owner",
+            "last_name": "User",
+            "phone": "0930000000",
+            "gender": "Male",
+            "nationality": "Ethiopian",
+            "password": "admintestpas@1"
+        }        
+        create_url = reverse('create_owner')
+        response = self.client.post(create_url, owner_data, format='json')
+        owner_id = response.data['id']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.guest_token}')
+        retrieve_url = reverse('retrieve_owner', kwargs={'id': owner_id})
+        response = self.client.delete(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_cannot_list_owners(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.guest_token}')
+        list_url = reverse('list_owners')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

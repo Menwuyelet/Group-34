@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import City, Location, LocalAttraction, HotelCities
 from hotel.models import Hotel
-from accounts.models import User  # adjust import
+from accounts.models import User 
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -16,7 +16,6 @@ def get_tokens_for_user(user):
 
 class BusinessViewsTest(APITestCase):
     def setUp(self):
-        # Create users with roles
         self.admin_user = User.objects.create_user(
             email="admin@example.com",
             first_name="Admin",
@@ -101,15 +100,12 @@ class BusinessViewsTest(APITestCase):
                 "local_name": "Central Ethiopia"
             }
         }
-
         self.location = Location.objects.create(latitude=9.03, longitude=38.74)
         self.city = City.objects.create(
             name="Addis Ababa",
             description="Capital city",
             location=self.location
         )
-
-        
         self.valid_update = {
             "name": "Updated City",
             "description": "Updated description",
@@ -119,8 +115,6 @@ class BusinessViewsTest(APITestCase):
                 "local_name": "updated name"
             }
         }
-        # self.location1 = location={"latitude": 9.03, "longitude": 38.74, "local_name": "test1"}
-        # self.location2 = location={"latitude": 10, "longitude": 11, "local_name": "test1"}
         self.city1 = City.objects.create(
             name="Addis Ababa",
             description="Capital city of Ethiopia",
@@ -130,14 +124,13 @@ class BusinessViewsTest(APITestCase):
             name="Gondar",
             description="Historical city",
         )
-
         self.attraction = LocalAttraction.objects.create(
             name="National Museum",
             description="Home of Lucy fossil",
             location = self.location,
             city=self.city1
         )
-
+    ## city 
     def test_admin_can_create_city_successfully(self):
         url = reverse('create_city')
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
@@ -158,7 +151,6 @@ class BusinessViewsTest(APITestCase):
         response = self.client.post(url, self.valid_city, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(City.objects.count(), 3)
-
 
     def test_missing_required_field_name(self):
         invalid_city = {
@@ -225,7 +217,6 @@ class BusinessViewsTest(APITestCase):
         self.city.refresh_from_db()
         self.assertEqual(self.city.name, "Addis Ababa")
 
-
     def test_unauthenticated_user_cannot_update_city(self):
         url = reverse("update_city", kwargs={"city_id": self.city.id})
         response = self.client.put(url, self.valid_update, format="json")
@@ -260,7 +251,7 @@ class BusinessViewsTest(APITestCase):
         self.assertTrue(City.objects.filter(id=self.city.id).exists())
 
     def test_list_cities_success(self):
-        url = reverse("list_cities")  # because it's a ViewSet
+        url = reverse("list_cities") 
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 4)
@@ -274,6 +265,7 @@ class BusinessViewsTest(APITestCase):
         self.assertEqual(response.data["name"], "Addis Ababa")
         self.assertEqual(response.data["description"], "Capital city of Ethiopia")
 
+    ## local attraction
     def test_create_local_attraction(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
         url = reverse("create_city_attraction", kwargs={"city_id": self.city1.id})
@@ -334,12 +326,106 @@ class BusinessViewsTest(APITestCase):
         self.assertGreaterEqual(len(response.data), 1)
         self.assertIn("name", response.data['results'][0])
 
+    ## hotel city
+    def test_admin_can_create_hotel_city(self):
+        url = reverse("link_city_and_hotel", kwargs={"hotel_id": self.hotel.id})
+        valid_hotel_city = {
+            "city": self.city.id
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.post(url, valid_hotel_city, format="json")
 
-    # def test_admin_can_create_hotel_city(self):
-    #     url = reverse('hotelcity-create', kwargs={'hotel_id': self.hotel.id})
-    #     self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
-    #     response = self.client.post(url, self.valid_hotel_city, format="json")
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(HotelCities.objects.count(), 1)
-    #     self.assertEqual(HotelCities.objects.first().hotel, self.hotel)
-    #     self.assertEqual(HotelCities.objects.first().city, self.city)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(HotelCities.objects.count(), 1)
+        hotel_city = HotelCities.objects.first()
+        self.assertEqual(hotel_city.hotel, self.hotel)
+        self.assertEqual(hotel_city.city, self.city)
+
+    def test_owner_can_create_hotel_city(self):
+        url = reverse("link_city_and_hotel", kwargs={"hotel_id": self.hotel.id})
+        valid_hotel_city = {
+            "city": self.city.id
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.post(url, valid_hotel_city, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_manager_can_create_hotel_city(self):
+        url = reverse("link_city_and_hotel", kwargs={"hotel_id": self.hotel.id})
+        valid_hotel_city = {"city": self.city.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.post(url, valid_hotel_city, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_user_cannot_create_hotel_city(self):
+        url = reverse("link_city_and_hotel", kwargs={"hotel_id": self.hotel.id})
+        valid_hotel_city = {"city": self.city.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.post(url, valid_hotel_city, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(HotelCities.objects.count(), 0)
+
+    def test_admin_can_update_hotel_city(self):
+        hotel_city = HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        url = reverse("update_hotel_city", kwargs={"hotel_id": self.hotel.id, "hotel_city_id": hotel_city.id})
+        update_data = {"city": self.city2.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.put(url, update_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        hotel_city.refresh_from_db()
+        self.assertEqual(hotel_city.city.id, self.city2.id)
+
+    def test_owner_can_update_hotel_city(self):
+        hotel_city = HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        url = reverse("update_hotel_city", kwargs={"hotel_id": self.hotel.id, "hotel_city_id": hotel_city.id})
+        update_data = {"city": self.city2.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.put(url, update_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        hotel_city.refresh_from_db()
+        self.assertEqual(hotel_city.city.id, self.city2.id)
+
+    def test_manager_can_update_hotel_city(self):
+        hotel_city = HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        url = reverse("update_hotel_city", kwargs={"hotel_id": self.hotel.id, "hotel_city_id": hotel_city.id})
+        update_data = {"city": self.city2.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.put(url, update_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        hotel_city.refresh_from_db()
+        self.assertEqual(hotel_city.city.id, self.city2.id)
+
+    def test_admin_can_delete_hotel_city(self):
+        hotel_city = HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        url = reverse("delete_hotel_city", kwargs={"hotel_id": self.hotel.id, "hotel_city_id": hotel_city.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelCities.objects.filter(id=hotel_city.id).exists())
+
+    def test_owner_can_delete_hotel_city(self):
+        hotel_city = HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        url = reverse("delete_hotel_city", kwargs={"hotel_id": self.hotel.id, "hotel_city_id": hotel_city.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelCities.objects.filter(id=hotel_city.id).exists())
+
+    def test_manager_can_delete_hotel_city(self):
+        hotel_city = HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        url = reverse("delete_hotel_city", kwargs={"hotel_id": self.hotel.id, "hotel_city_id": hotel_city.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelCities.objects.filter(id=hotel_city.id).exists())
+
+    def test_list_hotel_cities(self):
+        HotelCities.objects.create(hotel=self.hotel, city=self.city)
+        HotelCities.objects.create(hotel=self.hotel, city=self.city2)
+
+        url = reverse("list_hotel_cities", kwargs={"hotel_id": self.hotel.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 2)
+        self.assertIn("city", response.data['results'][0])

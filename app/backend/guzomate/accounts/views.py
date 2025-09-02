@@ -5,6 +5,8 @@ from .models import User
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets 
+from hotel.models import Hotel
+from rest_framework.exceptions import PermissionDenied
 # Create your views here.
 
 class GuestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -28,7 +30,6 @@ class GuestCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
-
 class GuestListView(generics.ListAPIView):
     serializer_class = GuestSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -58,13 +59,14 @@ class StaffCreateView(generics.CreateAPIView):
     serializer_class = StaffSerializer
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
 
-
-    def get_serializer(self, *args, **kwargs):
+    def perform_create(self, serializer):
         hotel_id = self.kwargs.get('hotel_id')
-        if 'data' in kwargs:
-            kwargs['data'] = kwargs['data'].copy()
-            kwargs['data']['hotel'] = hotel_id  
-        return super().get_serializer(*args, **kwargs)
+        hotel = Hotel.objects.get(id=hotel_id)
+        
+        role = serializer.validated_data.get('role')
+        if self.request.user.role == 'Manager' and role == 'Manager':
+            raise PermissionDenied("Manager cannot create another manager.")
+        serializer.save(hotel=hotel)
 
 class StaffListView(generics.ListAPIView):
     serializer_class = StaffSerializer
@@ -75,8 +77,8 @@ class StaffListView(generics.ListAPIView):
 
 ## owner
 class OwnerRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = OwnerAdminSerializer
     permission_classes = [IsAdmin]
+    serializer_class = OwnerAdminSerializer
     lookup_field = 'id'
 
     def get_queryset(self):

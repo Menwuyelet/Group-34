@@ -5,6 +5,7 @@ from django.urls import reverse
 from accounts.models import User
 from hotel.models import Hotel, Location, Room, Event, Amenities, Image, HotelAttraction
 from django.core.files.uploadedfile import SimpleUploadedFile
+from business.models import LocalAttraction, City
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -171,7 +172,43 @@ class HotelViewsTest(APITestCase):
             hotel_name=self.hotel.name,
             image=SimpleUploadedFile(name='test.jpg', content=b'\x47\x49\x46\x38', content_type='image/gif')
         )
+        ## hotel attraction 
 
+        self.city = City.objects.create(
+            name="Addis Ababa",
+            description="Capital city of Ethiopia",
+
+        )
+        self.location1 = Location.objects.create(
+            latitude=10.0, longitude=38.7, local_name="Addis Ababa"
+        )
+        self.local_attraction = LocalAttraction.objects.create(
+            name="National Museum",
+            description="Historic site",
+            accessibility="Paid",
+            type="Museum",
+            location=self.location,
+            city=self.city,
+            availability=True
+        )
+        self.local_attraction1 = LocalAttraction.objects.create(
+            name="National Museum1",
+            description="Historic site",
+            accessibility="Free",
+            type="Museum",
+            location=self.location1,
+            city=self.city,
+            availability=True
+        )
+
+        self.hotel_attraction = HotelAttraction.objects.create(
+            hotel=self.hotel,
+            attraction=self.local_attraction,
+            distance = 3
+        )
+
+
+    ## Hotel test
     def test_admin_can_create_hotel(self):
         url = reverse("create_hotel")
         data = {
@@ -326,7 +363,7 @@ class HotelViewsTest(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-##Room
+    ##Room
     def test_owner_can_create_room(self):
         url = reverse("create_room", kwargs={"hotel_id": str(self.hotel.id)})
         data = {
@@ -491,7 +528,23 @@ class HotelViewsTest(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-## Staff
+    ## Staff
+
+    def test_owner_can_create_receptionist(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        data = {
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "email": "jane@example.com",
+            "phone": "0910000010",
+            "password": "Jane123!",
+            "role": "Receptionist"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.filter(email="jane@example.com").exists(), True)
+
     def test_manager_can_create_receptionist(self):
         create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
@@ -506,6 +559,34 @@ class HotelViewsTest(APITestCase):
         response = self.client.post(create_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.filter(email="john@example.com").exists(), True)
+
+    def test_owner_can_update_receptionist(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        data = {
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "email": "jane@example.com",
+            "phone": "0910000010",
+            "password": "Jane123!",
+            "role": "Receptionist"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        staff_id = response.data.get('id')
+
+        detail_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': staff_id})
+        update_data = {
+            "first_name": "OwnerUpdated",
+            "phone": "+251911223355"
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.patch(detail_url, update_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        user = User.objects.get(email="jane@example.com")
+        self.assertEqual(user.first_name, "OwnerUpdated")
+        self.assertEqual(user.phone, "+251911223355")
 
     def test_receptionist_can_be_updated_by_manager(self):
         create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
@@ -569,7 +650,188 @@ class HotelViewsTest(APITestCase):
         response = self.client.patch(detail_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-##Event
+    def test_manager_can_delete_receptionist(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        data = {
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@example.com",
+            "phone": "0910000009",
+            "password": "John123!",
+            "role": "Receptionist"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        staff_id = response.data.get('id')
+
+        delete_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': staff_id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=staff_id).exists())
+
+    def test_owner_can_delete_receptionist(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        data = {
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "email": "jane@example.com",
+            "phone": "0910000010",
+            "password": "Jane123!",
+            "role": "Receptionist"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        staff_id = response.data.get('id')
+
+        delete_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': staff_id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=staff_id).exists())
+
+    def test_normal_user_cannot_create_staff(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        data = {
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@example.com",
+            "phone": "0910000009",
+            "password": "John123!",
+            "role": "Receptionist"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_normal_user_cannot_update_staff(self):
+        # Create a staff first
+        staff = User.objects.create(
+            email="staff@example.com",
+            first_name="Staff",
+            last_name="Member",
+            phone="+251911223344",
+            role="Receptionist",
+            hotel=self.hotel,
+            password="Staff123!"
+        )
+        detail_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': staff.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        data = {"first_name": "Hacked"}
+        response = self.client.patch(detail_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_normal_user_cannot_delete_staff(self):
+        # Create a staff first
+        staff = User.objects.create(
+            email="staff2@example.com",
+            first_name="Staff",
+            last_name="Member",
+            phone="+251911223355",
+            role="Receptionist",
+            hotel=self.hotel,
+            password="Staff123!"
+        )
+        delete_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': staff.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.delete(delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_normal_user_cannot_list_staff(self):
+        list_url = reverse('list_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_manager_cannot_create_manager(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        data = {
+            "first_name": "Manager2",
+            "last_name": "Hotel",
+            "email": "manager2@example.com",
+            "phone": "0910000010",
+            "password": "Manager123!",
+            "role": "Manager"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    ## manager
+    def test_owner_can_create_manager(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        data = {
+            "first_name": "Alice",
+            "last_name": "Manager",
+            "email": "alice@example.com",
+            "phone": "0910000020",
+            "password": "Alice123!",
+            "role": "Manager"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(email="alice@example.com").exists())
+
+    def test_owner_can_update_manager(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        data = {
+            "first_name": "Bob",
+            "last_name": "Manager",
+            "email": "bolb@example.com",
+            "phone": "0911122021",
+            "password": "Bob123!23",
+            "role": "Manager"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        manager_id = response.data.get('id')
+
+        # Owner updates the manager
+        detail_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': manager_id})
+        update_data = {
+            "first_name": "UpdatedBob",
+            "phone": "09112233554"
+        }
+        response = self.client.patch(detail_url, update_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        user = User.objects.get(email="bolb@example.com")
+        self.assertEqual(user.first_name, "UpdatedBob")
+        self.assertEqual(user.phone, "09112233554")
+
+    def test_owner_can_delete_manager(self):
+        create_url = reverse('create_staff', kwargs={'hotel_id': self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        data = {
+            "first_name": "Charlie",
+            "last_name": "Manager",
+            "email": "charlie@example.com",
+            "phone": "0910000022",
+            "password": "Charlie123!",
+            "role": "Manager"
+        }
+        response = self.client.post(create_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        manager_id = response.data.get('id')
+
+        # Owner deletes the manager
+        detail_url = reverse('retrieve_staff', kwargs={'hotel_id': self.hotel.id, 'staff_id': manager_id})
+        response = self.client.delete(detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=manager_id).exists())
+
+    def test_owner_can_list_managers(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}", format="json")
+        list_url = reverse('list_staff', kwargs={"hotel_id": self.hotel.id})
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(any(user['role'] == "Manager" for user in response.data['results']))
+
+    ##Event
     def test_any_user_can_list_events(self):
         url = reverse("list_events", kwargs={"hotel_id": self.hotel.id})
         for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
@@ -662,7 +924,7 @@ class HotelViewsTest(APITestCase):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-##Amenities
+    ##Amenities
     def test_any_user_can_list_amenities(self):
         url = reverse("list_amenities", kwargs={"hotel_id": self.hotel.id})
         for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
@@ -732,7 +994,7 @@ class HotelViewsTest(APITestCase):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-##Room amenity
+    ##Room amenity
     def test_any_user_can_list_room_amenities(self):
         url = reverse("list_room_amenities", kwargs={"hotel_id": self.hotel.id, "room_id": self.room.id})
         for tokens in [self.admin_tokens, self.owner_tokens, self.manager_tokens,
@@ -816,7 +1078,7 @@ class HotelViewsTest(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-## Hotel image
+    ## Hotel image
     def test_non_owner_manager_cannot_create_hotel_image(self):
         url = reverse(
             "create_hotel_image",
@@ -890,7 +1152,7 @@ class HotelViewsTest(APITestCase):
             response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-## Room Image
+    ## Room Image
     def test_non_owner_manager_cannot_create_room_image(self):
         url = reverse(
             "create_room_image",
@@ -944,7 +1206,7 @@ class HotelViewsTest(APITestCase):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-## Event image
+    ## Event image
     def test_any_user_can_list_event_images(self):
         url = reverse("list_event_images", kwargs={"hotel_id": self.hotel.id, "event_id": self.event1.id})
         for tokens in [self.owner_tokens, self.manager_tokens, self.reception_tokens, self.user_tokens]:
@@ -998,22 +1260,92 @@ class HotelViewsTest(APITestCase):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    ## attraction
-    # def test_only_admin_can_create_attractions(self):
+    ## Hotel Attraction
+    def test_list_hotel_attractions(self):
+        url = reverse("list_hotel_attractions", kwargs={"hotel_id": self.hotel.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
 
+    def test_retrieve_hotel_attraction(self):
+        url = reverse("retrieve_hotel_attraction", kwargs={"hotel_id": self.hotel.id, "attraction_id": self.hotel_attraction.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(str(response.data['id']), str(self.hotel_attraction.id))
 
-    # def test_owner_can_create_attraction(self):
-    #     user_tokens = [self.owner_tokens, self.manager_tokens]
-    #     url = reverse('list_hotel_attractions')
-    #     data = {
-    #         'attraction': 'test attraction'
-    #     }
-    #     for token in user_tokens:
-    #         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token['access']}")
-    #         respose = self.client.post(url, )
-    #         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #         self.assertEqual(HotelAttraction.objects.count(), 1)
-    #         self.assertEqual(HotelAttraction.objects.first().hotel, self.hotel)
+    def test_owner_can_create_hotel_attraction(self):
+        url = reverse("create_hotel_attraction", kwargs={"hotel_id": self.hotel.id})
+        data = {"attraction": self.local_attraction1.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(HotelAttraction.objects.filter(attraction=self.local_attraction1).exists())
 
-    # def test_any_user_can_retrieve_hotel_attractions(self):
-    #     url = reverse
+    def test_manager_can_create_hotel_attraction(self):
+        url = reverse("create_hotel_attraction", kwargs={"hotel_id": self.hotel.id})
+        data = {"attraction": self.local_attraction1.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(HotelAttraction.objects.filter(attraction=self.local_attraction1).exists())
+
+    def test_user_cannot_create_hotel_attraction(self):
+        url = reverse("create_hotel_attraction", kwargs={"hotel_id": self.hotel.id})
+        data = {"attraction": self.local_attraction1.id, "distance": 2.5}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_can_update_hotel_attraction(self):
+        url = reverse("update_hotel_attraction", kwargs={
+            "hotel_id": self.hotel.id,
+            "attraction_id": self.hotel_attraction.id 
+        })
+        dist = self.hotel_attraction.distance
+        data = {"attraction": self.local_attraction1.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.hotel_attraction.refresh_from_db()
+        self.assertNotEqual(self.hotel_attraction.distance, dist)
+
+    def test_manager_can_update_hotel_attraction(self):
+        url = reverse("update_hotel_attraction", kwargs={
+            "hotel_id": self.hotel.id,
+            "attraction_id": self.hotel_attraction.id 
+        })
+        dist = self.hotel_attraction.distance
+        data = {"attraction": self.local_attraction1.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.hotel_attraction.refresh_from_db()
+        self.assertNotEqual(self.hotel_attraction.distance, dist)
+
+    def test_user_cannot_update_hotel_attraction(self):
+        url = reverse("update_hotel_attraction", kwargs={"hotel_id": self.hotel.id, "attraction_id": self.hotel_attraction.id})
+        data = {"attraction": self.local_attraction1.id}
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.put(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_can_delete_hotel_attraction(self):
+        url = reverse("delete_hotel_attraction", kwargs={"hotel_id": self.hotel.id, "attraction_id": self.hotel_attraction.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelAttraction.objects.filter(id=self.hotel_attraction.id).exists())
+
+    def test_manager_can_delete_hotel_attraction(self):
+        url = reverse("delete_hotel_attraction", kwargs={"hotel_id": self.hotel.id, "attraction_id": self.hotel_attraction.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelAttraction.objects.filter(id=self.hotel_attraction.id).exists())
+
+    def test_user_cannot_delete_hotel_attraction(self):
+        url = reverse("delete_hotel_attraction", kwargs={"hotel_id": self.hotel.id, "attraction_id": self.hotel_attraction.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(HotelAttraction.objects.filter(id=self.hotel_attraction.id).exists())

@@ -15,6 +15,7 @@ from business.models import LocalAttraction
 from django.db import transaction
 from accounts.models import User
 from accounts.utils.validators import validate_picture
+from geopy.distance import geodesic 
 
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -256,6 +257,7 @@ class EventSerializer(serializers.ModelSerializer):
     
 class HotelAttractionSerializer(serializers.ModelSerializer):
     hotel = serializers.UUIDField(read_only=True)
+    distance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     class Meta:
         model = HotelAttraction
         fields = ['id', 'hotel', 'attraction', 'distance']
@@ -280,13 +282,22 @@ class HotelAttractionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         hotel = validated_data.pop('hotel')
         attraction = validated_data.pop('attraction')
-        attraction_id = attraction.id
-        print(attraction_id)
-        hotelAttraction = HotelAttraction.objects.create(hotel=hotel, attraction=attraction, **validated_data)
+
+        hotel_coords = (hotel.location.latitude, hotel.location.longitude)
+        attraction_coords = (attraction.location.latitude, attraction.location.longitude)
+        distance_km = geodesic(hotel_coords, attraction_coords).km 
+        hotelAttraction = HotelAttraction.objects.create(hotel=hotel, attraction=attraction, distance=distance_km, **validated_data)
         return hotelAttraction
     
     @transaction.atomic
     def update(self, instance, validated_data):
+        attraction = validated_data.pop('attraction', None)
+        if attraction:
+            hotel_coords = (instance.hotel.location.latitude, instance.hotel.location.longitude)
+            attraction_coords = (attraction.location.latitude, attraction.location.longitude)
+            distance_km = geodesic(hotel_coords, attraction_coords).km 
+            instance.distance = distance_km
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()

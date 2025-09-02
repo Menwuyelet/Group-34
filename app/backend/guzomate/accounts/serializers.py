@@ -40,7 +40,6 @@ class StaffSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         role = attrs.get('role')
-        hotel = attrs.get('hotel')
         if role in ["Owner", 'Guest', 'Admin']:
             raise serializers.ValidationError({
                 "hotel": "User can not be Owner, Guest or Admin, please choose different role."
