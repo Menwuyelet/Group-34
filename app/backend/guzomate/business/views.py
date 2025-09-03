@@ -243,7 +243,7 @@ class HotelCityListView(generics.ListAPIView):
         hotel_id = self.kwargs.get('hotel_id')
         return HotelCities.objects.filter(hotel=hotel_id).order_by('city')
 
-## Guest Favorite 
+## Guest Favorite Write a test for this
 class FavoriteCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = FavoriteSerializer
@@ -279,8 +279,6 @@ class FavoriteDestroyView(generics.DestroyAPIView):
         
 
 ## Booking
-
-
 class UserBookingCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     # permission_classes = [AllowAny]
@@ -302,22 +300,35 @@ class UserBookingCreateView(generics.CreateAPIView):
         )
 
 class UserBookingUpdateView(generics.UpdateAPIView):
-    # permission_classes = [IsAuthenticated, IsOwnerOfInstance]
-    parser_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsOwnerOfInstance]
+    # parser_classes = [AllowAny]
     serializer_class = BookingSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'booking_id'
 
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user)
-
 
 class UserBookingReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
-    # permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
-    parser_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
+    serializer_class = BookingSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'booking_id'
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user).order_by("created_at")
+    
+class UserBookingStatusUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated, IsOwnerOfInstance]
+    # parser_classes = [AllowAny]
     serializer_class = BookingSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'booking_id'
 
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user)
+    
+    def perform_update(self, serializer):
+        serializer.save(
+            status='Cancelled'              
+        )

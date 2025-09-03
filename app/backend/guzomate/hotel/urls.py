@@ -48,6 +48,9 @@ from .views import (
                     HotelAttractionReadOnlyViewSet,
                     HotelAttractionDestroyView,
                     HotelAttractionUpdateView,
+                    ## Booking
+                    # InPersonBookingCreateView,
+                    # InPersonBookingUpdateView,
                     )
 from business.views import (
                                 ReviewCreateView, 
@@ -272,7 +275,13 @@ urlpatterns = [
 
     ## Booking
     path(
-            'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book'
+            'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book_online'
     ),
+    # path(
+    #         'hotel/<uuid:hotel_id>/book/', InPersonBookingCreateView.as_view(), name='book_in_person'
+    # ),
+    # path(
+    #         'hotel/<uuid:hotel_id>/booking/<uuid:hotel_id>/update', InPersonBookingUpdateView.as_view(), name='update_book_in_person'
+    # )
     
 ]

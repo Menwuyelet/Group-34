@@ -30,7 +30,8 @@ from business.views import (
                                 FavoriteReadOnlyViewSets,
                                 FavoriteDestroyView,
                                 UserBookingReadOnlyViewSet,
-                                UserBookingUpdateView
+                                UserBookingUpdateView,
+                                UserBookingStatusUpdateView
                             )
 
 
@@ -69,7 +70,7 @@ list_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'list'})
 retrieve_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'retrieve'})
 
 booking_list = UserBookingReadOnlyViewSet.as_view({'get': 'list'})
-booking_detail = UserBookingReadOnlyViewSet.as_view({'get': 'detail'})
+booking_detail = UserBookingReadOnlyViewSet.as_view({'get': 'retrieve'})
 
 urlpatterns = [
     ## auth
@@ -95,9 +96,10 @@ urlpatterns = [
     path('guest/<uuid:id>/favorites/', list_favorite, name='list_guest_favorites'),
 
     ## Booking
-    path('guest/<uuid:id>/bookings/list', booking_list, name='user_booking_list'),
+    path('guest/<uuid:id>/bookings', booking_list, name='user_booking_list'),
     path('guest/<uuid:id>/booking/<uuid:booking_id>', booking_detail, name='user_booking_detail'),
     path('guest/<uuid:id>/booking/<uuid:booking_id>/update/', UserBookingUpdateView.as_view(), name='update_user_booking'),
+    path('guest/<uuid:id>/booking/<uuid:booking_id>/cancel/', UserBookingStatusUpdateView.as_view(), name='cancel_user_booking'),
     
     ## admin
     path('admin/', include(router.urls)),
@@ -119,5 +121,4 @@ urlpatterns = [
     path('admin/city/<uuid:city_id>/attraction/<uuid:attraction_id>/update/', LocalAttractionUpdateView.as_view(), name='update_city_attraction'),
     path('admin/city/<uuid:city_id>/attraction/<uuid:attraction_id>/delete/', LocalAttractionDestroyView.as_view(), name='delete_city_attraction'),
 
-   
 ]

@@ -6,6 +6,7 @@ from django.db import transaction
 from accounts.utils.validators import validate_picture
 from accounts.models import User
 import uuid, re
+from .utils.validators import is_room_available
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -197,7 +198,7 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'description', 'hotel', 'room', 'guest_name', 'guest_phone', 'guest_nationality', 'guest_gender', 'number_of_adults', 'number_of_children', 'start_date', 'end_date', 'total_price', 'discount', 'booking_source', 'status', 'payment', 'created_at', 'updated_at']
         read_only_fields = ['id', 'booking_source', 'status', 'payment', 'created_at',  'total_price', 'discount', 'updated_at']
 
-    def validate_phone(self, value):
+    def validate_guest_phone(self, value):
         if not re.match(r'^\+?\d{7,15}$', value):
             raise serializers.ValidationError("Invalid phone number format.")
         return value
@@ -218,13 +219,16 @@ class BookingSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         no_adults = attrs.get('number_of_adults')
-        no_children = attrs.get('number_of_children', 0.0)
-        if no_adults < 0 or no_adults > 50:
-            raise serializers.ValidationError({"Number of adults": "enter valid number of adults."})
-        if no_children < 0 or no_children > 50:
-            raise serializers.ValidationError({"Number of children": "enter valid number of children."})
-        if no_adults == 0 and no_children == 0:
-            raise serializers.ValidationError({"Number of guests": "number of guests mus be greater than zero."})
+        no_children = attrs.get('number_of_children')
+        if no_adults is not None:
+            if no_adults < 0 or no_adults > 50:
+                raise serializers.ValidationError({"Number of adults": "enter valid number of adults."})
+        if no_children is not None:
+            if no_children < 0 or no_children > 50:
+                raise serializers.ValidationError({"Number of children": "enter valid number of children."})
+        if no_adults is not None or no_children is not None:
+            if no_adults == 0 and no_children == 0:
+                raise serializers.ValidationError({"Number of guests": "number of guests must be greater than zero."})
 
         return attrs
     
@@ -241,12 +245,187 @@ class BookingSerializer(serializers.ModelSerializer):
         room = validated_data['room']
         base_price = room.price_per_night * duration
 
+        if not is_room_available(room, start, end):
+            raise serializers.ValidationError({"Room": "the selected room is not available."})
+
         # Apply discount if any
-        discount_percent = validated_data.get('discount', 0) or 0
+        discount_percent = validated_data.get('discount', 0)
         total_price = float(base_price) * (1 - discount_percent / 100)
 
+        phone = validated_data.pop('guest_phone', None)
+        guest_name = validated_data.pop('guest_name', None)
+        if not phone:
+            user = validated_data['user']
+            validated_data['guest_phone'] = user.phone
+        else:
+            validated_data['guest_phone'] = phone
+        if not guest_name:
+            user= validated_data['user']
+            validated_data['guest_name'] = f"{user.first_name} {user.last_name}"
+        else:
+            validated_data['guest_name'] = guest_name
         validated_data['total_price'] = total_price
+
         booking = Booking.objects.create(**validated_data)
         return booking
     
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        # Validate dates
+        start = validated_data.get('start_date', instance.start_date)
+        end = validated_data.get('end_date', instance.end_date)
+        duration = (end - start).days
+        if duration <= 0:
+            raise serializers.ValidationError("End date must be after start date.")
+
+        # Base price from room
+        room = validated_data.get('room', instance.room)
+        base_price = room.price_per_night * duration
+
+        # Check room availability
+        if not is_room_available(room, start, end, exclude_booking=instance):
+            # exclude_booking ensures current booking dates don't block itself
+            raise serializers.ValidationError({"Room": "the selected room is not available."})
+
+        # Apply discount if any
+        discount_percent = validated_data.get('discount', instance.discount) or 0
+        total_price = float(base_price) * (1 - discount_percent / 100)
+
+        # Handle guest info
+        phone = validated_data.pop('guest_phone', getattr(instance, 'guest_phone', None))
+        guest_name = validated_data.pop('guest_name', getattr(instance, 'guest_name', None))
+
+        if not phone:
+            user = validated_data.get('user', instance.user)
+            validated_data['guest_phone'] = user.phone
+        else:
+            validated_data['guest_phone'] = phone
+
+        if not guest_name:
+            user = validated_data.get('user', instance.user)
+            validated_data['guest_name'] = f"{user.first_name} {user.last_name}"
+        else:
+            validated_data['guest_name'] = guest_name
+
+        validated_data['total_price'] = total_price
+
+        # Update instance fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance
+
+# class InPersonBookingSerializer(serializers.ModelSerializer):
+#     user = serializers.PrimaryKeyRelatedField(read_only=True)
+#     hotel = serializers.PrimaryKeyRelatedField(read_only=True)
+
+#     class Meta:
+#         model = Booking
+#         fields = ['id',  'user', 'description', 'hotel', 'room', 'guest_name', 'guest_phone', 'guest_nationality', 'guest_gender', 'number_of_adults', 'number_of_children', 'start_date', 'end_date', 'total_price', 'discount', 'booking_source', 'status', 'payment', 'created_at', 'updated_at']
+#         read_only_fields = ['id', 'user', 'booking_source', 'status',  'created_at',  'total_price', 'discount', 'updated_at']
+
+#     def validate_guest_phone(self, value):
+#         if not re.match(r'^\+?\d{7,15}$', value):
+#             raise serializers.ValidationError("Invalid phone number format.")
+#         return value
+
+#     def validate_user(self, value):
+#         try:
+#             user = User.objects.get(id=value)
+#         except User.DoesNotExist:
+#             raise serializers.ValidationError({"User": "the provided user does not exist."})
+#         return value
     
+#     def validate_hotel(self, value):
+#         try:
+#             hotel = Hotel.objects.get(id=value)
+#         except Hotel.DoesNotExist:
+#             raise serializers.ValidationError({"Hotel": "the hotel you entered doesn't exist."})
+#         return value
+
+#     def validate(self, attrs):
+#         no_adults = attrs.get('number_of_adults')
+#         no_children = attrs.get('number_of_children')
+#         if no_adults is not None:
+#             if no_adults < 0 or no_adults > 50:
+#                 raise serializers.ValidationError({"Number of adults": "enter valid number of adults."})
+#         if no_children is not None:
+#             if no_children < 0 or no_children > 50:
+#                 raise serializers.ValidationError({"Number of children": "enter valid number of children."})
+#         if no_adults is not None or no_children is not None:
+#             if no_adults == 0 and no_children == 0:
+#                 raise serializers.ValidationError({"Number of guests": "number of guests must be greater than zero."})
+
+#         return attrs
+    
+
+#     @transaction.atomic
+#     def create(self, validated_data):
+#         start = validated_data['start_date']
+#         end = validated_data['end_date']
+#         duration = (end - start).days
+#         if duration <= 0:
+#             raise serializers.ValidationError("End date must be after start date.")
+
+#         room = validated_data['room']
+#         if not is_room_available(room, start, end):
+#             raise serializers.ValidationError({"Room": "the selected room is not available."})
+
+#         # Apply discount if any
+#         base_price = room.price_per_night * duration
+#         discount_percent = validated_data.get('discount', 0) or 0
+#         total_price = float(base_price) * (1 - discount_percent / 100)
+#         validated_data['total_price'] = total_price
+
+#         booking = Booking.objects.create(**validated_data)
+#         print("success")
+#         print(total_price)
+#         return booking
+    
+#     @transaction.atomic
+#     def update(self, instance, validated_data):
+#         # Validate dates
+#         start = validated_data.get('start_date', instance.start_date)
+#         end = validated_data.get('end_date', instance.end_date)
+#         duration = (end - start).days
+#         if duration <= 0:
+#             raise serializers.ValidationError("End date must be after start date.")
+
+#         # Base price from room
+#         room = validated_data.get('room', instance.room)
+#         base_price = room.price_per_night * duration
+
+#         # Check room availability
+#         if not is_room_available(room, start, end, exclude_booking=instance):
+#             # exclude_booking ensures current booking dates don't block itself
+#             raise serializers.ValidationError({"Room": "the selected room is not available."})
+
+#         # Apply discount if any
+#         discount_percent = validated_data.get('discount', instance.discount) or 0
+#         total_price = float(base_price) * (1 - discount_percent / 100)
+
+#         # Handle guest info
+#         phone = validated_data.pop('guest_phone', getattr(instance, 'guest_phone', None))
+#         guest_name = validated_data.pop('guest_name', getattr(instance, 'guest_name', None))
+
+#         if not phone:
+#             user = validated_data.get('user', instance.user)
+#             validated_data['guest_phone'] = user.phone
+#         else:
+#             validated_data['guest_phone'] = phone
+
+#         if not guest_name:
+#             user = validated_data.get('user', instance.user)
+#             validated_data['guest_name'] = f"{user.first_name} {user.last_name}"
+#         else:
+#             validated_data['guest_name'] = guest_name
+
+#         validated_data['total_price'] = total_price
+
+#         # Update instance fields
+#         for attr, value in validated_data.items():
+#             setattr(instance, attr, value)
+#         instance.save()
+
+#         return instance

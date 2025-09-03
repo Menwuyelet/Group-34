@@ -12,6 +12,8 @@ from .serializers import(
                         )
 from .models import Hotel, Room, Image, Event, Amenities, HotelAttraction
 from rest_framework.permissions import AllowAny
+from business.models import Booking
+# from business.serializers import InPersonBookingSerializer
 # Create your views here.
 
 ## Hotel
@@ -449,3 +451,35 @@ class HotelAttractionDestroyView(generics.DestroyAPIView):
             hotel=hotel_id,
             id = attraction_id
         )
+
+
+## Booking
+
+
+# class InPersonBookingCreateView(generics.CreateAPIView):
+#     serializer_class = InPersonBookingSerializer
+#     # permission_classes = [IsManagerOfHotel | IsReceptionist]
+#     permission_classes = [AllowAny]
+#     def perform_create(self, serializer):
+#         # Get hotel and room from URL params or request data
+#         hotel_id = self.kwargs.get("hotel_id")
+
+#         hotel = Hotel.objects.get(id=hotel_id)
+
+#         serializer.save(
+#             receptionist=self.request.user.id,
+#             hotel=hotel,
+#             booking_source="In person",
+#             status="Checked in"
+#         )
+
+# class InPersonBookingUpdateView(generics.UpdateAPIView):
+#     # permission_classes = [IsManagerOfHotel | IsReceptionist]
+#     parser_classes = [AllowAny]
+#     serializer_class = InPersonBookingSerializer
+#     lookup_field = 'id'
+#     lookup_url_kwarg = 'booking_id'
+
+#     def get_queryset(self):
+#         hotel = self.kwargs['hotel']
+#         return Booking.objects.all(hotel=hotel)
