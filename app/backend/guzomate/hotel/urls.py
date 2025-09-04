@@ -49,8 +49,10 @@ from .views import (
                     HotelAttractionDestroyView,
                     HotelAttractionUpdateView,
                     ## Booking
-                    # InPersonBookingCreateView,
-                    # InPersonBookingUpdateView,
+                    InPersonBookingCreateView,
+                    InPersonBookingUpdateView,
+                    BookingReadOnlyViews,
+                    ChangeBookingStatus,
                     )
 from business.views import (
                                 ReviewCreateView, 
@@ -60,8 +62,8 @@ from business.views import (
                                 HotelCityUpdateView, 
                                 HotelCityDestroyView,
                                 UserBookingCreateView,
-                                UserBookingUpdateView,
-                                UserBookingReadOnlyViewSet
+                                HotelOnlineHistoryReadOnlyViews,
+                                HotelLocalHistoryReadOnlyView,
                             )
 ## hotel viewSets
 hotel_list = HotelViewSet.as_view({'get': 'list'})
@@ -81,6 +83,15 @@ retrieve_attraction = HotelAttractionReadOnlyViewSet.as_view({'get': 'retrieve'}
 ## hotel city viewSets
 # list_cities = HotelCityReadonlyViewSet.as_view({'get': 'list'})
 # retrieve_city = HotelCityReadonlyViewSet.as_view({'get': 'retrieve'})
+## booking
+list_bookings = BookingReadOnlyViews.as_view({'get': 'list'})
+retrieve_booking = BookingReadOnlyViews.as_view({'get': 'retrieve'})
+## Hotel Online history
+list_online_history = HotelOnlineHistoryReadOnlyViews.as_view({'get': 'list'})
+retrieve_online_history = HotelOnlineHistoryReadOnlyViews.as_view({'get': 'retrieve'})
+## Hotel Local history
+list_local_history = HotelLocalHistoryReadOnlyView.as_view({'get': 'list'})
+retrieve_local_history = HotelLocalHistoryReadOnlyView.as_view({'get': 'retrieve'})
 urlpatterns = [
     ## hotel staff
     path(
@@ -277,11 +288,34 @@ urlpatterns = [
     path(
             'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book_online'
     ),
-    # path(
-    #         'hotel/<uuid:hotel_id>/book/', InPersonBookingCreateView.as_view(), name='book_in_person'
-    # ),
-    # path(
-    #         'hotel/<uuid:hotel_id>/booking/<uuid:hotel_id>/update', InPersonBookingUpdateView.as_view(), name='update_book_in_person'
-    # )
-    
+    path(
+            'hotel/<uuid:hotel_id>/book/', InPersonBookingCreateView.as_view(), name='book_in_person'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/booking/<uuid:booking_id>/update', InPersonBookingUpdateView.as_view(), name='update_book_in_person'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/bookings', list_bookings, name='list_bookings'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/booking/<uuid:booking_id>/retrieve', retrieve_booking, name='retrieve_booking'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/booking/<uuid:booking_id>/status', ChangeBookingStatus.as_view(), name='complete_booking'
+    ),
+
+    ## Hotel History
+    path(
+            'hotel/<uuid:hotel_id>/booking/history/online', list_online_history, name='online_booking_history'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/booking/history/online/<uuid:history_id>', retrieve_online_history, name='retrieve_online_booking_history'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/booking/history/local', list_local_history, name='local_booking_history'
+    ),
+    path(
+            'hotel/<uuid:hotel_id>/booking/history/local/<uuid:history_id>', retrieve_local_history, name='retrieve_local_booking_history'
+    ),
+
 ]

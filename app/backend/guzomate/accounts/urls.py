@@ -31,7 +31,8 @@ from business.views import (
                                 FavoriteDestroyView,
                                 UserBookingReadOnlyViewSet,
                                 UserBookingUpdateView,
-                                UserBookingStatusUpdateView
+                                UserBookingStatusUpdateView,
+                                UserHistoryReadOnlyView,
                             )
 
 
@@ -72,6 +73,10 @@ retrieve_favorite = FavoriteReadOnlyViewSets.as_view({'get': 'retrieve'})
 booking_list = UserBookingReadOnlyViewSet.as_view({'get': 'list'})
 booking_detail = UserBookingReadOnlyViewSet.as_view({'get': 'retrieve'})
 
+list_history = UserHistoryReadOnlyView.as_view({'get': 'list'})
+retrieve_history = UserHistoryReadOnlyView.as_view({'get': 'retrieve'})
+
+
 urlpatterns = [
     ## auth
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -101,6 +106,9 @@ urlpatterns = [
     path('guest/<uuid:id>/booking/<uuid:booking_id>/update/', UserBookingUpdateView.as_view(), name='update_user_booking'),
     path('guest/<uuid:id>/booking/<uuid:booking_id>/cancel/', UserBookingStatusUpdateView.as_view(), name='cancel_user_booking'),
     
+    ## History
+    path('guest/<uuid:id>/history', list_history, name='list_user_booking_history'),
+    path('guest/<uuid:id>/history/<uuid:history_id>', retrieve_history, name='retrieve_user_booking_history'),
     ## admin
     path('admin/', include(router.urls)),
     ### owner

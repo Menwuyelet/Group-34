@@ -1,5 +1,5 @@
 # from django.urls import path
-# from .views import ReviewCreateView, ReviewUpdateView
+# from .views import HotelHistoryReadOnlyViews
 
 # urlpatterns = [
 #     path('')

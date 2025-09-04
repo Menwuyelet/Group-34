@@ -8,11 +8,13 @@ from .serializers import (
                             LocalAttractionSerializer, 
                             HotelCitiesSerializers, 
                             FavoriteSerializer,
-                            BookingSerializer
+                            BookingSerializer,
+                            HotelOnlineHistorySerializer,
+                            UserHistorySerializer,
                         )
 from hotel.models import Hotel, Image, Room
 from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
-from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking
+from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking, HotelHistory, UserHistory
 
 ## Review
 class ReviewCreateView(generics.CreateAPIView):
@@ -301,7 +303,7 @@ class UserBookingCreateView(generics.CreateAPIView):
 
 class UserBookingUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsOwnerOfInstance]
-    # parser_classes = [AllowAny]
+    # permission_classes = [AllowAny]
     serializer_class = BookingSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'booking_id'
@@ -311,24 +313,66 @@ class UserBookingUpdateView(generics.UpdateAPIView):
 
 class UserBookingReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
+    # permission_classes = [AllowAny]
     serializer_class = BookingSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'booking_id'
 
     def get_queryset(self):
+        # user = self.kwargs['id']
+        # return Booking.objects.filter(user=user).order_by("created_at")
         return Booking.objects.filter(user=self.request.user).order_by("created_at")
     
 class UserBookingStatusUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsOwnerOfInstance]
-    # parser_classes = [AllowAny]
+    # permission_classes = [AllowAny]
     serializer_class = BookingSerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'booking_id'
 
     def get_queryset(self):
+        # user = self.kwargs['id']
+        # return Booking.objects.filter(user=user).order_by("created_at")
         return Booking.objects.filter(user=self.request.user)
     
     def perform_update(self, serializer):
         serializer.save(
             status='Cancelled'              
         )
+
+## Hotel History
+
+class HotelOnlineHistoryReadOnlyViews(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsManagerOfHotel | IsOwnerofHotel | IsAdmin]
+    serializer_class = HotelOnlineHistorySerializer
+    # permission_classes = [AllowAny]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'history_id'
+
+    def get_queryset(self):
+        hotel= self.kwargs['hotel_id']
+        return HotelHistory.objects.filter(hotel=hotel, source="Online").order_by("created_at")
+    
+class HotelLocalHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
+    serializer_class = HotelOnlineHistorySerializer
+    # permission_classes = [AllowAny]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'history_id'
+
+    def get_queryset(self):
+        hotel= self.kwargs['hotel_id']
+        return HotelHistory.objects.filter(hotel=hotel, source="In person").order_by("created_at")
+    
+class UserHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsOwnerOfInstance | IsAdmin]
+    serializer_class = UserHistorySerializer
+    # permission_classes = [AllowAny]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'history_id'
+
+    def get_queryset(self):
+        user = self.kwargs['id']
+        return UserHistory.objects.filter(user=user).order_by("created_at")
+        # return UserHistory.objects.filter(user=self.request.user).order_by("created_at")
+    

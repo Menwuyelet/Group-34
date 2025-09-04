@@ -13,7 +13,7 @@ from .serializers import(
 from .models import Hotel, Room, Image, Event, Amenities, HotelAttraction
 from rest_framework.permissions import AllowAny
 from business.models import Booking
-# from business.serializers import InPersonBookingSerializer
+from business.serializers import InPersonBookingSerializer, BookingStatusSerializer
 # Create your views here.
 
 ## Hotel
@@ -402,7 +402,6 @@ class EventImageDestroyView(generics.DestroyAPIView):
         return Image.objects.filter(hotel=hotel_id, imageable_id=event_id, imageable_type='Event')
 
 # Hotel Attractions 
-
 class HotelAttractionReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = HotelAttractionSerializer
     permission_classes = [AllowAny]
@@ -455,31 +454,53 @@ class HotelAttractionDestroyView(generics.DestroyAPIView):
 
 ## Booking
 
+class InPersonBookingCreateView(generics.CreateAPIView):
+    permission_classes = [IsManagerOfHotel | IsReceptionist]
+    permission_classes = [AllowAny]
+    serializer_class = InPersonBookingSerializer
+    def perform_create(self, serializer):
+        hotel_id = self.kwargs.get("hotel_id")
+        hotel = Hotel.objects.get(id=hotel_id)
+        serializer.save(
+            receptionist=self.request.user.id,
+            hotel=hotel,
+            booking_source="In person",
+            status="Checked_in"
+        )
 
-# class InPersonBookingCreateView(generics.CreateAPIView):
-#     serializer_class = InPersonBookingSerializer
-#     # permission_classes = [IsManagerOfHotel | IsReceptionist]
-#     permission_classes = [AllowAny]
-#     def perform_create(self, serializer):
-#         # Get hotel and room from URL params or request data
-#         hotel_id = self.kwargs.get("hotel_id")
+class InPersonBookingUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsManagerOfHotel | IsReceptionist]
+    # permission_classes = [AllowAny]
+    serializer_class = InPersonBookingSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'booking_id'
 
-#         hotel = Hotel.objects.get(id=hotel_id)
+    def get_queryset(self):
+        hotel_id = self.kwargs.get("hotel_id")
+        hotel = Hotel.objects.get(id=hotel_id)
+        return Booking.objects.filter(hotel=hotel)
 
-#         serializer.save(
-#             receptionist=self.request.user.id,
-#             hotel=hotel,
-#             booking_source="In person",
-#             status="Checked in"
-#         )
+class BookingReadOnlyViews(viewsets.ReadOnlyModelViewSet):
+    # permission_classes = [AllowAny]
+    permission_classes = [IsManagerOfHotel | IsReceptionist]
+    serializer_class = InPersonBookingSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'booking_id'
 
-# class InPersonBookingUpdateView(generics.UpdateAPIView):
-#     # permission_classes = [IsManagerOfHotel | IsReceptionist]
-#     parser_classes = [AllowAny]
-#     serializer_class = InPersonBookingSerializer
-#     lookup_field = 'id'
-#     lookup_url_kwarg = 'booking_id'
+    def get_queryset(self):
+        hotel_id = self.kwargs.get("hotel_id")
+        hotel = Hotel.objects.get(id=hotel_id)
+        return Booking.objects.filter(hotel=hotel).order_by("created_at")
+    
+class ChangeBookingStatus(generics.UpdateAPIView):
+    # permission_classes = [AllowAny]
+    permission_classes = [IsManagerOfHotel | IsReceptionist]
+    serializer_class = BookingStatusSerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'booking_id'
 
-#     def get_queryset(self):
-#         hotel = self.kwargs['hotel']
-#         return Booking.objects.all(hotel=hotel)
+    def get_queryset(self):
+        hotel_id = self.kwargs.get("hotel_id")
+        hotel = Hotel.objects.get(id=hotel_id)
+        return Booking.objects.filter(hotel=hotel)
+   

@@ -46,7 +46,7 @@ class Booking(models.Model):
     number_of_children = models.IntegerField(default=0)
     start_date = models.DateField(null=False, blank=False)
     end_date = models.DateField(null=False, blank=False)
-    total_price = models.DecimalField(null=False, blank=False, max_digits=5, decimal_places=2)
+    total_price = models.DecimalField(null=False, blank=False, max_digits=10, decimal_places=2)
     discount = models.DecimalField(default=0.0, max_digits=5, decimal_places=1)
     booking_source = models.CharField(choices=[
                                             ('Online', 'Online'),
@@ -57,7 +57,7 @@ class Booking(models.Model):
     status = models.CharField(choices=[
                                         ('Pending', 'Pending'),
                                         ('Confirmed', 'Confirmed'),
-                                        ("Checked_in", "Checked In"),
+                                        ("Checked_in", "Checked in"),
                                         ('Cancelled', 'Cancelled'),
                                         ('Completed', 'Completed'),
                                     ],
@@ -95,12 +95,13 @@ class UserHistory(models.Model):
     def __str__(self):
         return self.id
     
-class HotelHistoryOnline(models.Model):
+class HotelHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.UUIDField(blank=False, null=False)
-    booking_id = models.UUIDField(null=False, blank=False)
+    hotel = models.UUIDField(blank=False, null=False)
+    booking = models.UUIDField(null=False, blank=False)
     created_at = models.DateField(auto_now_add=True)
-
+    source = models.CharField(max_length=10, null=False, blank=False)
     def __str__(self):
         return self.id 
 
