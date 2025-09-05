@@ -33,6 +33,7 @@ from business.views import (
                                 UserBookingUpdateView,
                                 UserBookingStatusUpdateView,
                                 UserHistoryReadOnlyView,
+                                UserHistoryDeleteView
                             )
 
 
@@ -109,6 +110,7 @@ urlpatterns = [
     ## History
     path('guest/<uuid:id>/history', list_history, name='list_user_booking_history'),
     path('guest/<uuid:id>/history/<uuid:history_id>', retrieve_history, name='retrieve_user_booking_history'),
+    path('guest/<uuid:id>/history/<uuid:history_id>/delete', UserHistoryDeleteView.as_view(), name='delete_user_booking_history'),
     ## admin
     path('admin/', include(router.urls)),
     ### owner

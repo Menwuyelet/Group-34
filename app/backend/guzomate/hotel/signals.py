@@ -1,12 +1,12 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from .models import Hotel, Location, Event, Room, Amenities, Image
-from business.models import City, HotelCities
+from business.models import Booking, HotelHistory, UserHistory
 from accounts.models import User
 import os
 
 @receiver(post_delete, sender=Hotel)
-def delete_related_location(sender, instance, **kwargs):
+def delete_related_instances(sender, instance, **kwargs):
     """Delete the related Location when a Hotel is deleted."""
     instance.location.delete()
     
@@ -25,7 +25,7 @@ def delete_related_location(sender, instance, **kwargs):
     User.objects.filter(hotel=instance, role__in=['manager', 'reception']).delete()
 
 @receiver(post_delete, sender=Room)
-def delete_related_room_images(sender, instance, **kwargs):
+def delete_related_room_instances(sender, instance, **kwargs):
     """Delete all images related to a Room when the Room is deleted."""
     Image.objects.filter(imageable_type="Room", imageable_id=instance.id).delete()
     # Delete room amenities
@@ -49,18 +49,3 @@ def delete_image_file(sender, instance, **kwargs):
         if os.path.isfile(instance.image.path):
             os.remove(instance.image.path)
             
-# @receiver(post_save, sender=Hotel)
-# def create_hotel_city(sender, instance, created, **kwargs):
-#     if created and instance.location:
-#         city_name = instance.location.city
-#         if city_name:
-#             try:
-#                 # Find the City with this name
-#                 city = City.objects.get(name=city_name)
-#                 # Create HotelCity entry linking hotel and city
-#                 HotelCities.objects.get_or_create(
-#                     hotel=instance,
-#                     city=city
-#                 )
-#             except City.DoesNotExist:
-#                 raise ValueError({"City": "The city entered doesn't exist."})

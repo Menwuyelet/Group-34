@@ -64,6 +64,7 @@ from business.views import (
                                 UserBookingCreateView,
                                 HotelOnlineHistoryReadOnlyViews,
                                 HotelLocalHistoryReadOnlyView,
+                                HotelHistoryDeleteView
                             )
 ## hotel viewSets
 hotel_list = HotelViewSet.as_view({'get': 'list'})
@@ -317,5 +318,7 @@ urlpatterns = [
     path(
             'hotel/<uuid:hotel_id>/booking/history/local/<uuid:history_id>', retrieve_local_history, name='retrieve_local_booking_history'
     ),
-
+    path(
+            'hotel/<uuid:hotel_id>/booking/history/<uuid:history_id>/delete', HotelHistoryDeleteView.as_view(), name='delete_booking_history'
+    ),
 ]

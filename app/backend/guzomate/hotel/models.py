@@ -126,22 +126,3 @@ class Image(models.Model):
     # Optional names for folder structure
     hotel_name = models.CharField(max_length=15, blank=True, null=True)
     city_name = models.CharField(max_length=15, blank=True, null=True)
-
-class HotelHistory(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    guest_name = models.CharField(max_length=255)
-    guest_contact = models.CharField(max_length=50)
-    guest_nationality = models.CharField(max_length=100)
-    guest_gender = models.CharField(
-                                     max_length=6, 
-                                     choices=[
-                                         ('Male', 'Male'),
-                                         ('Female', 'Female'),
-                                        ],
-                                      default='Male'
-                                    )
-    booking = models.ForeignKey('business.Booking', on_delete=models.DO_NOTHING, related_name='histories')
-    created_at = models.DateField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.guest_name} - {self.booking_id}"

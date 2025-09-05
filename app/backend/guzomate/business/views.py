@@ -9,7 +9,7 @@ from .serializers import (
                             HotelCitiesSerializers, 
                             FavoriteSerializer,
                             BookingSerializer,
-                            HotelOnlineHistorySerializer,
+                            HotelHistorySerializer,
                             UserHistorySerializer,
                         )
 from hotel.models import Hotel, Image, Room
@@ -275,9 +275,10 @@ class FavoriteDestroyView(generics.DestroyAPIView):
     lookup_url_kwarg = 'favorite_id'
 
     def get_queryset(self):
-        user = self.request.user
-        favorite_id = self.kwargs.get('favorite_id')
-        return Favorite.objects.filter(user=user, id=favorite_id)
+        # user = self.request.user
+        # favorite_id = self.kwargs.get('favorite_id')
+        # return Favorite.objects.filter(user=user, id=favorite_id)
+        return Favorite.objects.filter(user=self.request.user)
         
 
 ## Booking
@@ -344,7 +345,7 @@ class UserBookingStatusUpdateView(generics.UpdateAPIView):
 
 class HotelOnlineHistoryReadOnlyViews(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel | IsAdmin]
-    serializer_class = HotelOnlineHistorySerializer
+    serializer_class = HotelHistorySerializer
     # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'history_id'
@@ -355,7 +356,7 @@ class HotelOnlineHistoryReadOnlyViews(viewsets.ReadOnlyModelViewSet):
     
 class HotelLocalHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
-    serializer_class = HotelOnlineHistorySerializer
+    serializer_class = HotelHistorySerializer
     # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'history_id'
@@ -363,7 +364,20 @@ class HotelLocalHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         hotel= self.kwargs['hotel_id']
         return HotelHistory.objects.filter(hotel=hotel, source="In person").order_by("created_at")
+
+
+class HotelHistoryDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
+    # permission_classes = [AllowAny] 
+    serializer_class = HotelHistorySerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'history_id'
+
+    def get_queryset(self):
+        hotel = self.kwargs['hotel_id']
+        return HotelHistory.objects.filter(hotel=hotel)
     
+## user history
 class UserHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsOwnerOfInstance | IsAdmin]
     serializer_class = UserHistorySerializer
@@ -372,7 +386,18 @@ class UserHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
     lookup_url_kwarg = 'history_id'
 
     def get_queryset(self):
-        user = self.kwargs['id']
-        return UserHistory.objects.filter(user=user).order_by("created_at")
-        # return UserHistory.objects.filter(user=self.request.user).order_by("created_at")
+        # user = self.kwargs['id']
+        # return UserHistory.objects.filter(user=user).order_by("created_at")
+        return UserHistory.objects.filter(user=self.request.user).order_by("created_at")
     
+class UserHistoryDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
+    # permission_classes = [AllowAny] 
+    serializer_class = HotelHistorySerializer
+    lookup_field = 'id'
+    lookup_url_kwarg = 'history_id'
+
+    def get_queryset(self):
+        # user = self.kwargs['id']
+        # return UserHistory.objects.filter(user=user)
+        return HotelHistory.objects.filter(user=self.request.user)

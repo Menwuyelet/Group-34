@@ -431,7 +431,8 @@ class BookingStatusSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         if instance.status == 'Completed' or instance.status == 'Cancelled':
             raise serializers.ValidationError({"Booking": "the status for this booking can't be updated."})
-
+        if validated_data['status'] == 'Pending':
+            raise serializers.ValidationError({"Status": "the status can not be changed to pending."})
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -440,7 +441,7 @@ class BookingStatusSerializer(serializers.ModelSerializer):
     
 ## Hotel History
 
-class HotelOnlineHistorySerializer(serializers.ModelSerializer):
+class HotelHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = HotelHistory
         fields = ['id', 'user', 'hotel', 'booking', 'created_at']

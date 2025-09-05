@@ -89,21 +89,17 @@ class Booking(models.Model):
 class UserHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, blank=False)
-    booking = models.UUIDField(blank=False, null=False)
+    booking = models.ForeignKey(Booking, on_delete=models.DO_NOTHING)
     created_at = models.DateField(auto_now_add=True)
 
-    def __str__(self):
-        return self.id
     
 class HotelHistory(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    user = models.UUIDField(blank=False, null=False)
-    hotel = models.UUIDField(blank=False, null=False)
-    booking = models.UUIDField(null=False, blank=False)
-    created_at = models.DateField(auto_now_add=True)
-    source = models.CharField(max_length=10, null=False, blank=False)
-    def __str__(self):
-        return self.id 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE)
+    booking = models.ForeignKey(Booking, on_delete=models.DO_NOTHING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=10)
 
 ## to accounts
 class Favorite(models.Model):
