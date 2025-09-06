@@ -5,8 +5,8 @@ from django.urls import reverse
 from accounts.models import User
 from hotel.models import Hotel, Location, Room, Event, Amenities, Image, HotelAttraction
 from django.core.files.uploadedfile import SimpleUploadedFile
-from business.models import LocalAttraction, City
-
+from business.models import LocalAttraction, City, Booking
+from datetime import date, timedelta
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
     return {
@@ -68,6 +68,14 @@ class HotelViewsTest(APITestCase):
             hotel=self.hotel, description="Deluxe Room", type="Deluxe",
             room_no="101", price_per_night=100.0, available=True, number_of_beds=2
         )
+        self.roomm = Room.objects.create(
+            hotel=self.hotel, description="Deluxe Room", type="Deluxe",
+            room_no="91", price_per_night=100.0, available=True, number_of_beds=2
+        )
+        self.room2 = Room.objects.create(
+            hotel=self.hotel, description="Deluxe Room", type="Deluxe",
+            room_no="102", price_per_night=100.0, available=True, number_of_beds=2
+        )
 
         self.manager_user = User.objects.create_user(
             email="manager@example.com",
@@ -110,7 +118,6 @@ class HotelViewsTest(APITestCase):
             accessibility="Paid",
             price=100
         )
-
         self.event3 = Event.objects.create(
             hotel=self.hotel,
             title="Event 3",
@@ -118,14 +125,12 @@ class HotelViewsTest(APITestCase):
             accessibility="Paid",
             price=100
         )
-
         self.amenity1 = Amenities.objects.create(
             hotel=self.hotel, name="WiFi", description="Free WiFi", availability=True, amenityable_type="Hotel"
         )
         self.amenity2 = Amenities.objects.create(
             hotel=self.hotel, name="Pool", description="Swimming Pool", availability=False, amenityable_type="Hotel"
         )
-
 
         # Room Amenities
         self.room_amenity1 = Amenities.objects.create(
@@ -164,7 +169,6 @@ class HotelViewsTest(APITestCase):
             hotel_name=self.hotel.name,
             image=SimpleUploadedFile(name='test.jpg', content=b'\x47\x49\x46\x38', content_type='image/gif')
         )
-
         self.event_image2 = Image.objects.create(
             imageable_type='Event',
             imageable_id=self.event1.id,
@@ -200,15 +204,99 @@ class HotelViewsTest(APITestCase):
             city=self.city,
             availability=True
         )
-
         self.hotel_attraction = HotelAttraction.objects.create(
             hotel=self.hotel,
             attraction=self.local_attraction,
             distance = 3
         )
 
+        ## Booking
+        self.valid_booking = {
+            "room": self.roomm.id,
+            "guest_name": "John Doe",
+            "guest_phone": "+251900000009",
+            "guest_nationality": "Ethiopian",
+            "guest_gender": "Male",
+            "number_of_adults": 2,
+            "number_of_children": 1,
+            "start_date": str(date.today()),
+            "end_date": str(date.today() + timedelta(days=2)),
+        }
+        self.valid_booking1 = {
+            "room": self.roomm.id,
+            "guest_name": "John Doe",
+            "guest_phone": "+251900000009",
+            "guest_nationality": "Ethiopian",
+            "guest_gender": "Male",
+            "number_of_adults": 2,
+            "number_of_children": 1,
+            "start_date": str(date.today() + timedelta(days=2)),
+            "end_date": str(date.today() + timedelta(days=3)),
+        }
+        self.booking = Booking.objects.create(
+            receptionist=self.receptionist_user.id,
+            hotel=self.hotel,
+            room=self.room2,
+            guest_name="John Doe",
+            guest_phone="+251911111111",
+            guest_nationality="Ethiopian",
+            guest_gender="Male",
+            number_of_adults=2,
+            number_of_children=0,
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=2),
+            total_price=200,
+            booking_source="In person",
+            status="Checked_in"
+        )
+    
+        self.valid_update_booking = {
+            "guest_name": "Updated Name",
+            "guest_phone": "+251922222222",
+            "number_of_adults": 3,
+            "number_of_children": 1,
+            "start_date": str(date.today()),
+            "end_date": str(date.today() + timedelta(days=3)),
+        }
 
-    ## Hotel test
+        self.booking1 = Booking.objects.create(
+            user=self.normal_user,
+            receptionist=self.receptionist_user.id,
+            hotel=self.hotel,
+            room=self.roomm,
+            guest_name="Guest One",
+            guest_phone="+251911111111",
+            guest_nationality="Ethiopian",
+            guest_gender="Male",
+            number_of_adults=2,
+            number_of_children=0,
+            start_date=date.today()+ timedelta(days=3),
+            end_date=date.today() + timedelta(days=4),
+            total_price=200,
+            booking_source="In person",
+            status="Checked_in",
+        )
+
+        self.booking2 = Booking.objects.create(
+            user=self.normal_user,
+            receptionist=self.receptionist_user.id,
+            hotel=self.hotel,
+            room=self.roomm,
+            guest_name="Guest Two",
+            guest_phone="+251922222222",
+            guest_nationality="Ethiopian",
+            guest_gender="Female",
+            number_of_adults=1,
+            number_of_children=1,
+            start_date=date.today()+ timedelta(days=5),
+            end_date=date.today() + timedelta(days=8),
+            total_price=300,
+            booking_source="In person",
+            status="Checked_in",
+        )
+
+        self.valid_status_payload = {"status": "Completed"}
+    # Hotel test
     def test_admin_can_create_hotel(self):
         url = reverse("create_hotel")
         data = {
@@ -369,7 +457,7 @@ class HotelViewsTest(APITestCase):
         data = {
             "description": "New Room",
             "type": "Suite",
-            "room_no": "102",
+            "room_no": "90",
             "price_per_night": 200.0,
             "available": True,
             "number_of_beds": 1
@@ -1349,3 +1437,310 @@ class HotelViewsTest(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(HotelAttraction.objects.filter(id=self.hotel_attraction.id).exists())
+
+    # Booking
+        #Book
+    def test_successful_booking_by_receptionist(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.post(url, self.valid_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Booking.objects.count(), 4)
+        booking = Booking.objects.first()
+        self.assertEqual(booking.receptionist, self.receptionist_user.id)
+        self.assertEqual(booking.hotel, self.hotel)
+
+    def test_successful_booking_by_manager(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.manager_tokens["access"]}')
+        response = self.client.post(url, self.valid_booking1, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Booking.objects.count(), 4)
+        booking = Booking.objects.filter(start_date = str(date.today() + timedelta(days=2)))
+        self.assertEqual(booking[0].receptionist, self.manager_user.id)
+        self.assertEqual(booking[0].hotel, self.hotel)
+
+    def test_failed_booking_invalid_phone(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        payload = self.valid_booking.copy()
+        payload["guest_phone"] = "12345"  
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid phone number format.", str(response.data))
+
+    def test_failed_booking_invalid_date_range(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        payload = self.valid_booking.copy()
+        payload["end_date"] = str(date.today())  # same as start_date → invalid
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("End date must be after start date.", str(response.data))
+
+    def test_permission_denied_for_normal_user(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.user_tokens["access"]}')
+        response = self.client.post(url, self.valid_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permission_denied_for_admin_user(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_tokens["access"]}')
+        response = self.client.post(url, self.valid_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permission_denied_for_owner_user(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.owner_tokens["access"]}')
+        response = self.client.post(url, self.valid_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permission_denied_without_authentication(self):
+        url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
+        response = self.client.post(url, self.valid_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+ 
+        # Update
+    def test_successful_update_by_receptionist(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.patch(url, self.valid_update_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.guest_name, "Updated Name")
+        self.assertEqual(self.booking.number_of_adults, 3)
+
+    def test_successful_update_by_manager(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.manager_tokens["access"]}')
+        response = self.client.patch(url, self.valid_update_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.guest_phone, "+251922222222")
+    
+    def test_failed_update_invalid_phone(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        payload = self.valid_update_booking.copy()
+        payload["guest_phone"] = "12345"
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.patch(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid phone number format.", str(response.data))
+
+    def test_failed_update_invalid_date_range(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        payload = self.valid_update_booking.copy()
+        payload["end_date"] = str(date.today())  # same day → invalid
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.patch(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("End date must be after start date.", str(response.data))
+
+    def test_permission_denied_for_normal_user(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.user_tokens["access"]}')
+        response = self.client.patch(url, self.valid_update_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permission_denied_for_owner_user(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.owner_tokens["access"]}')
+        response = self.client.patch(url, self.valid_update_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permission_denied_for_owner_user(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_tokens["access"]}')
+        response = self.client.patch(url, self.valid_update_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permission_denied_without_authentication(self):
+        url = reverse('update_book_in_person', kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id})
+        response = self.client.patch(url, self.valid_update_booking, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        #List
+    def test_list_bookings_success_receptionist(self):
+        list_url = reverse("list_bookings", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 4)
+
+    def test_list_bookings_success_manager(self):
+        list_url = reverse("list_bookings", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.manager_tokens["access"]}')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 4)
+
+    def test_list_bookings_failed_as_normal_user(self):
+        list_url = reverse("list_bookings", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.user_tokens["access"]}')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_bookings_failed_as_admin_user(self):
+        list_url = reverse("list_bookings", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_tokens["access"]}')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_bookings_failed_as_owner_user(self):
+        list_url = reverse("list_bookings", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.owner_tokens["access"]}')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_bookings_unauthenticated(self):
+        list_url = reverse("list_bookings", kwargs={"hotel_id": self.hotel.id})
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        #Retrieve
+    def test_retrieve_booking_success_receptionist(self):
+        retrieve_url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking1.id},
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["guest_name"], "Guest One")
+
+    def test_retrieve_booking_success_manager(self):
+        retrieve_url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking1.id},
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.manager_tokens["access"]}')
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["guest_phone"], "+251911111111")
+
+    def test_retrieve_booking_not_found(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_retrieve_booking_permission_denied_user(self):
+        retrieve_url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking1.id},
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.user_tokens["access"]}')
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_retrieve_booking_permission_denied_owner(self):
+        retrieve_url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking1.id},
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.owner_tokens["access"]}')
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_retrieve_booking_permission_denied_admin(self):
+        retrieve_url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking1.id},
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_tokens["access"]}')
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_retrieve_booking_unauthenticated(self):
+        retrieve_url = reverse(
+            "retrieve_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking1.id},
+        )
+        response = self.client.get(retrieve_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+        #Status update
+    def test_change_status_success_receptionist(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )        
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "Completed")
+
+    def test_change_status_success_manager(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )        
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.manager_tokens["access"]}')
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "Completed")
+
+    def test_change_status_invalid_value(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )    
+        payload = {"status": "NotAStatus"}
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.patch(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "Checked_in")  
+
+    def test_change_status_not_found(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={
+                "hotel_id": self.hotel.id,
+                "booking_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            },
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_change_status_permission_denied_user(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )    
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.user_tokens["access"]}')
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_change_status_permission_denied_owner(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )    
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.owner_tokens["access"]}')
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_change_status_permission_denied_admin(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )    
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_tokens["access"]}')
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_change_status_unauthenticated(self):
+        url = reverse(
+            "complete_booking",
+            kwargs={"hotel_id": self.hotel.id, "booking_id": self.booking.id},
+        )    
+        response = self.client.patch(url, self.valid_status_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

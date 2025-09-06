@@ -15,6 +15,8 @@ from .serializers import (
 from hotel.models import Hotel, Image, Room
 from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
 from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking, HotelHistory, UserHistory
+from django.shortcuts import get_object_or_404
+
 
 ## Review
 class ReviewCreateView(generics.CreateAPIView):
@@ -292,8 +294,8 @@ class UserBookingCreateView(generics.CreateAPIView):
         hotel_id = self.kwargs.get("hotel_id")
         room_id = self.kwargs.get("room_id")
 
-        hotel = Hotel.objects.get(id=hotel_id)
-        room = Room.objects.get(id=room_id, hotel=hotel)
+        hotel = get_object_or_404(Hotel, id=hotel_id)
+        room = get_object_or_404(Room, id=room_id, hotel=hotel)
 
         serializer.save(
             user=self.request.user,
@@ -312,6 +314,7 @@ class UserBookingUpdateView(generics.UpdateAPIView):
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user)
 
+##TEST STARTING FROM HERE
 class UserBookingReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
     # permission_classes = [AllowAny]

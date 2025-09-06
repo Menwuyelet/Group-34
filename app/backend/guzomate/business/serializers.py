@@ -256,16 +256,31 @@ class BookingSerializer(serializers.ModelSerializer):
 
         phone = validated_data.pop('guest_phone', None)
         guest_name = validated_data.pop('guest_name', None)
+        nationality = validated_data.pop('guest_nationality', None)
+        gender = validated_data.pop('guest_gender', None)
         if not phone:
             user = validated_data['user']
             validated_data['guest_phone'] = user.phone
         else:
             validated_data['guest_phone'] = phone
+        
         if not guest_name:
             user= validated_data['user']
             validated_data['guest_name'] = f"{user.first_name} {user.last_name}"
         else:
             validated_data['guest_name'] = guest_name
+        
+        if not gender:
+            user = validated_data['user']
+            validated_data['guest_gender'] = user.gender
+        else:
+            validated_data['guest_gender'] = gender
+        
+        if not nationality:
+            user = validated_data['user']
+            validated_data['guest_nationality'] = user.nationality
+        else:
+            validated_data['guest_nationality'] = nationality
         validated_data['total_price'] = total_price
 
         booking = Booking.objects.create(**validated_data)
@@ -296,6 +311,8 @@ class BookingSerializer(serializers.ModelSerializer):
         # Handle guest info
         phone = validated_data.pop('guest_phone', getattr(instance, 'guest_phone', None))
         guest_name = validated_data.pop('guest_name', getattr(instance, 'guest_name', None))
+        nationality = validated_data.pop('guest_nationality',getattr(instance, 'guest_nationality', None))
+        gender = validated_data.pop('guest_gender', getattr(instance, 'guest_gender', None))
 
         if not phone:
             user = validated_data.get('user', instance.user)
@@ -309,6 +326,17 @@ class BookingSerializer(serializers.ModelSerializer):
         else:
             validated_data['guest_name'] = guest_name
 
+        if not nationality:
+            user = validated_data.get('user', instance.user)
+            validated_data['guest_nationality'] = user.nationality
+        else:
+            validated_data['guest_nationality'] = nationality
+
+        if not gender:
+            user = validated_data.get('user', instance.user)
+            validated_data['guest_gender'] = user.gender
+        else:
+            validated_data['guest_gender'] = gender
         validated_data['total_price'] = total_price
 
         # Update instance fields

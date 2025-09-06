@@ -456,7 +456,7 @@ class HotelAttractionDestroyView(generics.DestroyAPIView):
 
 class InPersonBookingCreateView(generics.CreateAPIView):
     permission_classes = [IsManagerOfHotel | IsReceptionist]
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
     serializer_class = InPersonBookingSerializer
     def perform_create(self, serializer):
         hotel_id = self.kwargs.get("hotel_id")
