@@ -5,7 +5,7 @@ from django.urls import reverse
 from accounts.models import User
 from hotel.models import Hotel, Location, Room, Event, Amenities, Image, HotelAttraction
 from django.core.files.uploadedfile import SimpleUploadedFile
-from business.models import LocalAttraction, City, Booking
+from business.models import LocalAttraction, City, Booking, HotelHistory
 from datetime import date, timedelta
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -296,6 +296,74 @@ class HotelViewsTest(APITestCase):
         )
 
         self.valid_status_payload = {"status": "Completed"}
+
+    ##Hotel history
+        self.history_booking = Booking.objects.create(
+            user=self.normal_user,
+            hotel=self.hotel,
+            room=self.roomm,
+            guest_name="Guest One",
+            guest_phone="+251911111111",
+            guest_nationality="Ethiopian",
+            guest_gender="Male",
+            number_of_adults=2,
+            number_of_children=0,
+            start_date=date.today()+ timedelta(days=10),
+            end_date=date.today() + timedelta(days=14),
+            total_price=200,
+            booking_source="Online",
+            status="Pending",
+        )
+        self.history_booking1 = Booking.objects.create(
+            receptionist=self.receptionist_user.id,
+            hotel=self.hotel,
+            room=self.roomm,
+            guest_name="Guest One",
+            guest_phone="+251911111111",
+            guest_nationality="Ethiopian",
+            guest_gender="Male",
+            number_of_adults=2,
+            number_of_children=0,
+            start_date=date.today()+ timedelta(days=17),
+            end_date=date.today() + timedelta(days=18),
+            total_price=200,
+            booking_source="In person",
+            status="Checked in",
+        )
+        self.history_booking2 = Booking.objects.create(
+            user=self.normal_user,
+            hotel=self.hotel,
+            room=self.roomm,
+            guest_name="Guest One",
+            guest_phone="+251911111111",
+            guest_nationality="Ethiopian",
+            guest_gender="Male",
+            number_of_adults=2,
+            number_of_children=0,
+            start_date=date.today()+ timedelta(days=15),
+            end_date=date.today() + timedelta(days=16),
+            total_price=200,
+            booking_source="Online",
+            status="Pending",
+        )
+        self.online_history1 = HotelHistory.objects.create(
+            user = self.normal_user,
+            hotel=self.hotel,
+            booking = self.history_booking,
+            source="Online",
+        )
+        self.online_history2 = HotelHistory.objects.create(
+            user = self.normal_user,
+            hotel=self.hotel,
+            booking = self.history_booking2,
+            source="Online",
+        )
+        # HotelHistory (Offline, should not appear in queryset)
+        self.offline_history = HotelHistory.objects.create(
+            hotel=self.hotel,
+            booking = self.history_booking2,
+            source="In person",
+        )
     # Hotel test
     def test_admin_can_create_hotel(self):
         url = reverse("create_hotel")
@@ -1445,17 +1513,17 @@ class HotelViewsTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.reception_tokens["access"]}')
         response = self.client.post(url, self.valid_booking, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Booking.objects.count(), 4)
-        booking = Booking.objects.first()
-        self.assertEqual(booking.receptionist, self.receptionist_user.id)
-        self.assertEqual(booking.hotel, self.hotel)
+        self.assertEqual(Booking.objects.count(), 7)
+        booking = Booking.objects.filter(start_date = str(date.today()))
+        self.assertEqual(booking[0].receptionist, self.receptionist_user.id)
+        self.assertEqual(booking[0].hotel, self.hotel)
 
     def test_successful_booking_by_manager(self):
         url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.manager_tokens["access"]}')
         response = self.client.post(url, self.valid_booking1, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Booking.objects.count(), 4)
+        self.assertEqual(Booking.objects.count(), 7)
         booking = Booking.objects.filter(start_date = str(date.today() + timedelta(days=2)))
         self.assertEqual(booking[0].receptionist, self.manager_user.id)
         self.assertEqual(booking[0].hotel, self.hotel)
@@ -1499,7 +1567,7 @@ class HotelViewsTest(APITestCase):
     def test_permission_denied_without_authentication(self):
         url = reverse('book_in_person', kwargs={"hotel_id": self.hotel.id})
         response = self.client.post(url, self.valid_booking, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
  
         # Update
     def test_successful_update_by_receptionist(self):
@@ -1744,3 +1812,218 @@ class HotelViewsTest(APITestCase):
         )    
         response = self.client.patch(url, self.valid_status_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    ##Hotel History
+        # online
+    def test_admin_can_list_online_history(self):
+        url = reverse("online_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2) 
+
+    def test_owner_can_list_online_history(self):
+        url = reverse("online_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2) 
+
+    def test_manager_can_list_online_history(self):
+        url = reverse("online_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2) 
+
+    def test_normal_user_cannot_list_online_history(self):
+        url = reverse("online_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_retrieve_online_history(self):
+        url = reverse(
+            "retrieve_online_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.online_history1.id))
+        
+    def test_owner_can_retrieve_online_history(self):
+        url = reverse(
+            "retrieve_online_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.online_history1.id))
+
+    def test_manager_can_retrieve_online_history(self):
+        url = reverse(
+            "retrieve_online_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.online_history1.id))
+
+    def test_normal_user_cannot_retrieve_online_history(self):
+        url = reverse(
+            "retrieve_online_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_cannot_retrieve_offline_history_through_online_endpoint(self):
+        url = reverse(
+            "retrieve_online_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.offline_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+        ## local
+    def test_owner_can_list_local_history(self):
+        url = reverse("local_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
+    def test_manager_can_list_local_history(self):
+        url = reverse("local_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
+    def test_admin_cannot_list_local_history(self):
+        url = reverse("local_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_normal_user_cannot_list_local_history(self):
+        url = reverse("local_booking_history", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_owner_can_retrieve_local_history(self):
+        url = reverse(
+            "retrieve_local_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.offline_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.offline_history.id))
+    
+    def test_manager_can_retrieve_local_history(self):
+        url = reverse(
+            "retrieve_local_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.offline_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.offline_history.id))
+
+    def test_admin_cannot_retrieve_local_history(self):
+        url = reverse(
+            "retrieve_local_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.offline_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_normal_user_cannot_retrieve_local_history(self):
+        url = reverse(
+            "retrieve_local_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.offline_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+    def test_cannot_retrieve_online_history_through_local_endpoint(self):
+        url = reverse(
+            "retrieve_local_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.get(url, format="json")
+
+        # Even Owner should not be able to fetch Online history via Local endpoint
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_owner_can_delete_history(self):
+        url = reverse(
+            "delete_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_tokens['access']}")
+        response = self.client.delete(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelHistory.objects.filter(id=self.online_history1.id).exists())
+
+    def test_manager_can_delete_history(self):
+        url = reverse(
+            "delete_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.offline_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.manager_tokens['access']}")
+        response = self.client.delete(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(HotelHistory.objects.filter(id=self.offline_history.id).exists())
+
+    def test_admin_cannot_delete_history(self):
+        url = reverse(
+            "delete_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_tokens['access']}")
+        response = self.client.delete(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+        self.assertTrue(HotelHistory.objects.filter(id=self.online_history1.id).exists())
+
+    def test_normal_user_cannot_delete_history(self):
+        url = reverse(
+            "delete_booking_history",
+            kwargs={"hotel_id": self.hotel.id, "history_id": self.online_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.user_tokens['access']}")
+        response = self.client.delete(url, format="json")
+
+        self.assertIn(response.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+        self.assertTrue(HotelHistory.objects.filter(id=self.online_history1.id).exists())

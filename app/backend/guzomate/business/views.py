@@ -16,6 +16,7 @@ from hotel.models import Hotel, Image, Room
 from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
 from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking, HotelHistory, UserHistory
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import PermissionDenied
 
 
 ## Review
@@ -247,7 +248,7 @@ class HotelCityListView(generics.ListAPIView):
         hotel_id = self.kwargs.get('hotel_id')
         return HotelCities.objects.filter(hotel=hotel_id).order_by('city')
 
-## Guest Favorite Write a test for this
+## Guest Favorite 
 class FavoriteCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = FavoriteSerializer
@@ -264,24 +265,17 @@ class FavoriteReadOnlyViewSets(viewsets.ReadOnlyModelViewSet):
     lookup_url_kwarg = 'favorite_id'
 
     def get_queryset(self):
-        user = self.request.user
-        favorite_id = self.kwargs.get('favorite_id', None)
-        if favorite_id:
-            return Favorite.objects.filter(user=user, id=favorite_id)
-        return Favorite.objects.filter(user=user).order_by('created_at')
+        user = self.kwargs['id']
+        if self.request.user.id != user and self.request.user.role != 'Admin':
+            raise  PermissionDenied("You cannot access someone else's favorite list")
+        return Favorite.objects.filter(user=user).order_by("created_at")
 
 class FavoriteDestroyView(generics.DestroyAPIView):
     permission_classes = [IsOwnerOfInstance]
     serializer_class = FavoriteSerializer
+    queryset = Favorite.objects.all()
     lookup_field = 'id'
-    lookup_url_kwarg = 'favorite_id'
-
-    def get_queryset(self):
-        # user = self.request.user
-        # favorite_id = self.kwargs.get('favorite_id')
-        # return Favorite.objects.filter(user=user, id=favorite_id)
-        return Favorite.objects.filter(user=self.request.user)
-        
+    lookup_url_kwarg = 'favorite_id'     
 
 ## Booking
 class UserBookingCreateView(generics.CreateAPIView):
@@ -314,7 +308,6 @@ class UserBookingUpdateView(generics.UpdateAPIView):
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user)
 
-##TEST STARTING FROM HERE
 class UserBookingReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
     # permission_classes = [AllowAny]
@@ -345,7 +338,6 @@ class UserBookingStatusUpdateView(generics.UpdateAPIView):
         )
 
 ## Hotel History
-
 class HotelOnlineHistoryReadOnlyViews(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel | IsAdmin]
     serializer_class = HotelHistorySerializer
@@ -368,7 +360,6 @@ class HotelLocalHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
         hotel= self.kwargs['hotel_id']
         return HotelHistory.objects.filter(hotel=hotel, source="In person").order_by("created_at")
 
-
 class HotelHistoryDeleteView(generics.DestroyAPIView):
     permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
     # permission_classes = [AllowAny] 
@@ -382,25 +373,22 @@ class HotelHistoryDeleteView(generics.DestroyAPIView):
     
 ## user history
 class UserHistoryReadOnlyView(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsOwnerOfInstance | IsAdmin]
+    permission_classes = [IsAuthenticated, IsOwnerOfInstance | IsAdmin]
     serializer_class = UserHistorySerializer
     # permission_classes = [AllowAny]
     lookup_field = 'id'
     lookup_url_kwarg = 'history_id'
 
     def get_queryset(self):
-        # user = self.kwargs['id']
-        # return UserHistory.objects.filter(user=user).order_by("created_at")
-        return UserHistory.objects.filter(user=self.request.user).order_by("created_at")
+        user = self.kwargs['id']
+        if self.request.user.id != user and self.request.user.role != 'Admin':
+            raise  PermissionDenied("You cannot access someone else's history")
+        return UserHistory.objects.filter(user=user).order_by("created_at")
     
 class UserHistoryDeleteView(generics.DestroyAPIView):
-    permission_classes = [IsManagerOfHotel | IsOwnerofHotel]
+    permission_classes = [IsOwnerOfInstance]
     # permission_classes = [AllowAny] 
-    serializer_class = HotelHistorySerializer
+    queryset = UserHistory.objects.all()
+    serializer_class = UserHistorySerializer
     lookup_field = 'id'
     lookup_url_kwarg = 'history_id'
-
-    def get_queryset(self):
-        # user = self.kwargs['id']
-        # return UserHistory.objects.filter(user=user)
-        return HotelHistory.objects.filter(user=self.request.user)

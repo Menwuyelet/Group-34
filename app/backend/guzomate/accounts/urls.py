@@ -104,7 +104,6 @@ urlpatterns = [
     ## Booking
     path('guest/<uuid:id>/bookings', booking_list, name='user_booking_list'),
     path('guest/<uuid:id>/booking/<uuid:booking_id>', booking_detail, name='user_booking_detail'),
-##TEST STARTING FROM HERE
     path('guest/<uuid:id>/booking/<uuid:booking_id>/update/', UserBookingUpdateView.as_view(), name='update_user_booking'),
     path('guest/<uuid:id>/booking/<uuid:booking_id>/cancel/', UserBookingStatusUpdateView.as_view(), name='cancel_user_booking'),
     

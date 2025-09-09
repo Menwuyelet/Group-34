@@ -91,8 +91,7 @@ class UserHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, blank=False)
     booking = models.ForeignKey(Booking, on_delete=models.DO_NOTHING)
     created_at = models.DateField(auto_now_add=True)
-
-    
+ 
 class HotelHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

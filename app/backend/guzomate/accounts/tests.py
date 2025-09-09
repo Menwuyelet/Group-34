@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 from .models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from hotel.models import Hotel, Room, Location
-from business.models import Booking
+from business.models import Booking, UserHistory, Favorite
 from datetime import date, timedelta
 
 def get_tokens_for_user(user):
@@ -62,9 +62,14 @@ class UserViewsTest(APITestCase):
         }
         response = self.client.post(url_auth, guest_creds, format='json')
         self.guest_token = response.data['access']
-
-        # ##Booking
+        test_user_cred = {
+            "email": "test1@gmail.com",
+            "password": "normaluser"
+        }
+        response = self.client.post(url_auth, test_user_cred, format='json')
+        self.test_user_token = response.data['access']
         
+        ##Booking
         self.owner_user = User.objects.create_user(
             email="owner001@example.com",
             first_name="Hotel",
@@ -114,7 +119,7 @@ class UserViewsTest(APITestCase):
             total_price=100
         )
 
-        # Payload to update booking
+        ## Payload to update booking
         self.update_payload = {
             "number_of_adults": 3,
             "number_of_children": 0,
@@ -154,6 +159,27 @@ class UserViewsTest(APITestCase):
             booking_source="Online",
             status="Pending",
             total_price=100
+        )
+
+        self.user_history1 = UserHistory.objects.create(
+            user=self.test_user,
+            booking=self.booking,
+        )
+        self.user_history2 = UserHistory.objects.create(
+            user=self.test_user,
+            booking=self.booking1
+        )
+
+        ## Another user's history (should not be accessible by test_user)
+        self.other_user_history = UserHistory.objects.create(
+            user=self.admin_user,
+            booking=self.other_booking
+        )
+
+        ## Favorite
+        self.favorite = Favorite.objects.create(
+            user=self.test_user,
+            hotel=self.hotel.id
         )
     # user
     def test_create_user_with_valid_data(self):
@@ -741,3 +767,174 @@ class UserViewsTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    #cancel
+    def test_cancel_own_booking(self):
+        url = reverse(
+            "cancel_user_booking",
+            kwargs={"id": self.test_user.id, "booking_id": self.booking1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.patch(url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking1.refresh_from_db()
+        self.assertEqual(self.booking1.status, "Cancelled")
+
+    def test_cancel_other_user_booking_forbidden(self):
+        url = reverse(
+            "cancel_user_booking",
+            kwargs={"id": self.test_user.id, "booking_id": self.other_booking.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.patch(url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.other_booking.refresh_from_db()
+        self.assertNotEqual(self.other_booking.status, "Cancelled")
+
+    #User history
+    def test_user_can_list_own_history(self):
+        url = reverse("list_user_booking_history", kwargs={"id": self.test_user.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+
+    def test_user_cannot_list_others_history(self):
+        url = reverse("list_user_booking_history", kwargs={"id": self.test_user.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.test_user_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_list_any_users_history(self):
+        url = reverse("list_user_booking_history", kwargs={"id": self.test_user.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+    
+    def test_user_can_retrieve_own_history(self):
+        url = reverse(
+            "retrieve_user_booking_history",
+            kwargs={"id": self.test_user.id, "history_id": self.user_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.user_history1.id))
+        self.assertEqual(response.data["user"], self.test_user.id)
+
+    def test_user_cannot_retrieve_others_history(self):
+        url = reverse(
+            "retrieve_user_booking_history",
+            kwargs={"id": self.test_user1.id, "history_id": self.other_user_history.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_retrieve_any_users_history(self):
+        url = reverse(
+            "retrieve_user_booking_history",
+            kwargs={"id": self.test_user.id, "history_id": self.user_history1.id}
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.user_history1.id))
+
+    #Delete user history
+    def test_user_can_delete_own_history(self):
+        url = reverse("delete_user_booking_history", kwargs={"id": self.test_user.id, "history_id": self.user_history1.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.delete(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(UserHistory.objects.filter(id=self.user_history1.id).exists())
+
+    def test_user_cannot_delete_others_history(self):
+        url = reverse("delete_user_booking_history", kwargs={"id": self.test_user.id, "history_id": self.user_history1.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        response = self.client.delete(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(UserHistory.objects.filter(id=self.user_history1.id).exists())
+
+    def test_user_can_create_favorite(self):
+        url = reverse("create_favorite", kwargs={"hotel_id": self.hotel.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.post(url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Favorite.objects.filter(user=self.test_user, hotel=self.hotel.id).exists())
+
+    def test_user_can_list_their_favorites(self):
+        url = reverse("list_guest_favorites", kwargs={"id": self.test_user.id})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+
+    def test_user_can_retrieve_own_favorite(self):
+        url = reverse("retrieve_guest_favorite", kwargs={
+            "id": self.test_user.id,
+            "favorite_id": self.favorite.id
+        })
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.favorite.id))
+
+    
+    def test_user_cannot_retrieve_others_favorite(self):
+        url = reverse("retrieve_guest_favorite", kwargs={
+            "id": self.test_user.id,
+            "favorite_id": self.favorite.id
+        })
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.test_user_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_user_can_delete_own_favorite(self):
+        url = reverse("delete_guest_favorite", kwargs={
+            "id": self.test_user.id,
+            "favorite_id": self.favorite.id
+        })
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.delete(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Favorite.objects.filter(id=self.favorite.id).exists())
+
+    
+    def test_user_cannot_delete_others_favorite(self):
+        url = reverse("delete_guest_favorite", kwargs={
+            "id": self.test_user.id,
+            "favorite_id": self.favorite.id
+        })
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        response = self.client.delete(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Favorite.objects.filter(id=self.favorite.id).exists())
+    
+    
+    def test_admin_can_retrieve_any_favorite(self):
+        url = reverse("retrieve_guest_favorite", kwargs={
+            "id": self.test_user.id,
+            "favorite_id": self.favorite.id
+        })
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        response = self.client.get(url, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.favorite.id))

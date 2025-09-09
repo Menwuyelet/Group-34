@@ -285,8 +285,6 @@ urlpatterns = [
             'hotel/<uuid:hotel_id>/city/<uuid:hotel_city_id>/update/', HotelCityUpdateView.as_view() , name='update_hotel_city'
     ),
 
-
-##TEST STARTING FROM HERE
     ## Booking
     path(
             'hotel/<uuid:hotel_id>/room/<uuid:room_id>/book/', UserBookingCreateView.as_view(), name='book_online'
