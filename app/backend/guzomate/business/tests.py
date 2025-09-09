@@ -100,12 +100,15 @@ class BusinessViewsTest(APITestCase):
                 "local_name": "Central Ethiopia"
             }
         }
+        
         self.location = Location.objects.create(latitude=9.03, longitude=38.74)
+        
         self.city = City.objects.create(
             name="Addis Ababa",
             description="Capital city",
             location=self.location
         )
+        
         self.valid_update = {
             "name": "Updated City",
             "description": "Updated description",
@@ -115,21 +118,24 @@ class BusinessViewsTest(APITestCase):
                 "local_name": "updated name"
             }
         }
+        
         self.city1 = City.objects.create(
             name="Addis Ababa",
             description="Capital city of Ethiopia",
-
         )
+
         self.city2 = City.objects.create(
             name="Gondar",
             description="Historical city",
         )
+       
         self.attraction = LocalAttraction.objects.create(
             name="National Museum",
             description="Home of Lucy fossil",
             location = self.location,
             city=self.city1
         )
+    
     ## city 
     def test_admin_can_create_city_successfully(self):
         url = reverse('create_city')

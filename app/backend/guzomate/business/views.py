@@ -13,8 +13,22 @@ from .serializers import (
                             UserHistorySerializer,
                         )
 from hotel.models import Hotel, Image, Room
-from accounts.permissions import IsOwnerOfInstance, IsAdmin, IsManagerOfHotel, IsOwnerofHotel
-from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking, HotelHistory, UserHistory
+from accounts.permissions import (
+                                    IsOwnerOfInstance, 
+                                    IsAdmin, 
+                                    IsManagerOfHotel, 
+                                    IsOwnerofHotel
+                                )
+from .models import (
+                        Review, 
+                        City, 
+                        LocalAttraction, 
+                        HotelCities, 
+                        Favorite, 
+                        Booking, 
+                        HotelHistory, 
+                        UserHistory
+                    )
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 
@@ -73,7 +87,7 @@ class HotelReviewViewSet(viewsets.ReadOnlyModelViewSet):
 ## City
 class CityCreateView(generics.CreateAPIView):
     serializer_class = CitySerializer
-    permission_classes = [IsAdmin] # change to custom permission if needed
+    permission_classes = [IsAdmin] 
 
     def perform_create(self, serializer):
         serializer.save()
@@ -284,7 +298,6 @@ class UserBookingCreateView(generics.CreateAPIView):
     serializer_class = BookingSerializer
 
     def perform_create(self, serializer):
-        # Get hotel and room from URL params or request data
         hotel_id = self.kwargs.get("hotel_id")
         room_id = self.kwargs.get("room_id")
 

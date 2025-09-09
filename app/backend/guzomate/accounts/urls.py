@@ -82,6 +82,7 @@ urlpatterns = [
     ## auth
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
     ## guest
     path('guest/create/', GuestCreateView.as_view(), name='create_user'),
     path('guest/<uuid:id>/', GuestRetrieveUpdateDestroyView.as_view(), name='retrieve_user'),
@@ -95,6 +96,7 @@ urlpatterns = [
     path('guest/city/<uuid:city_id>/image/<uuid:image_id>/retrieve/', city_image_detail, name='city_image_retrieve'),
     path('guest/city/<uuid:city_id>/attractions/list/', local_attraction_list, name='list_city_attractions'),
     path('guest/city/<uuid:city_id>/attraction/detail/', local_attraction_retrieve, name='retrieve_city_attractions'),
+    
     ## Favorite
     path('hotel/<uuid:hotel_id>/favorite/create/', FavoriteCreateView.as_view(), name='create_favorite'),
     path('guest/<uuid:id>/favorite/<uuid:favorite_id>', retrieve_favorite, name='retrieve_guest_favorite'),
@@ -111,15 +113,19 @@ urlpatterns = [
     path('guest/<uuid:id>/history', list_history, name='list_user_booking_history'),
     path('guest/<uuid:id>/history/<uuid:history_id>', retrieve_history, name='retrieve_user_booking_history'),
     path('guest/<uuid:id>/history/<uuid:history_id>/delete', UserHistoryDeleteView.as_view(), name='delete_user_booking_history'),
+    
     ## admin
     path('admin/', include(router.urls)),
+    
     ### owner
     path('admin/owners/create/', OwnerCreateView.as_view(), name='create_owner'),
     path('admin/owners/list/', OwnerListView.as_view(), name='list_owners'),
     path('admin/owners/<uuid:id>/', OwnerRetrieveUpdateDestroyView.as_view(), name='retrieve_owner'),
+    
     ### guest
     path('admin/guest/list/', GuestListView.as_view(), name='list_users'),
     path('admin/guest/<uuid:id>/', GuestRetrieveUpdateDestroyView.as_view(), name='retrieve_user'),
+    
     ### city
     path('admin/cities/create/', CityCreateView.as_view(), name='create_city'),
     path('admin/city/<uuid:city_id>/update/', CityUpdateView.as_view(), name='update_city'),

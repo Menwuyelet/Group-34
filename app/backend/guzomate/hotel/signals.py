@@ -7,7 +7,7 @@ import os
 
 @receiver(post_delete, sender=Hotel)
 def delete_related_instances(sender, instance, **kwargs):
-    """Delete the related Location when a Hotel is deleted."""
+    """Delete the related instances when a Hotel is deleted."""
     instance.location.delete()
     
     Room.objects.filter(hotel=instance).delete()
@@ -23,24 +23,27 @@ def delete_related_instances(sender, instance, **kwargs):
 
     #Delet users
     User.objects.filter(hotel=instance, role__in=['manager', 'reception']).delete()
+    print("hotel cleanup")
 
 @receiver(post_delete, sender=Room)
 def delete_related_room_instances(sender, instance, **kwargs):
-    """Delete all images related to a Room when the Room is deleted."""
+    """Delete all related instances to a Room when the Room is deleted."""
     Image.objects.filter(imageable_type="Room", imageable_id=instance.id).delete()
     # Delete room amenities
     Amenities.objects.filter(amenityable_type="Room", amenityable_id=instance.id).delete()
-
+    print("Room cleanup")
 
 @receiver(post_delete, sender=Event)
 def delete_event_images(sender, instance, **kwargs):
     """Delete all images related to an Event when the Event is deleted."""
     Image.objects.filter(imageable_type="Event", imageable_id=instance.id).delete()
+    print("event cleanup")
 
 @receiver(post_delete, sender=Amenities)
 def delete_related_amenity_images(sender, instance, **kwargs):
     """Delete all images related to an Amenity when it is deleted."""
     Image.objects.filter(imageable_type="Amenity", imageable_id=instance.id).delete()
+    print("amenity cleanup")
 
 @receiver(post_delete, sender=Image)
 def delete_image_file(sender, instance, **kwargs):
@@ -48,4 +51,5 @@ def delete_image_file(sender, instance, **kwargs):
     if instance.image:
         if os.path.isfile(instance.image.path):
             os.remove(instance.image.path)
+            print("Image cleanup")
             

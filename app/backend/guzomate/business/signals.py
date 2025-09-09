@@ -13,7 +13,7 @@ def create_booking_history(sender, instance, **kwargs):
                 user=user,
                 hotel=instance.hotel,
                 booking=instance,
-                source= instance.booking_source # add default source if required
+                source= instance.booking_source 
             )
     if instance.booking_source == "Online" and instance.status in ['Confirmed']:
         UserHistory.objects.create(

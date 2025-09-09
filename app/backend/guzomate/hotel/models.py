@@ -15,17 +15,7 @@ class Location(models.Model):
 
     def __str__(self):
         return f"location_id: {self.id} - location_name: {self.local_name}"
-#
-# class City(models.Model):
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-#     name = models.CharField(max_length=15, null=False, blank=False, db_index=True)
-#     description = models.TextField(blank=False, null=False)
-#     location = models.OneToOneField(Location, on_delete=models.SET_NULL, blank=False, null=True)
 
-#     def __str__(self):
-#         return f"city_id: {self.id} - city_name: {self.name}"
-
- 
 class Hotel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     owner = models.UUIDField(blank=False, null=False)
@@ -49,13 +39,13 @@ class Room(models.Model):
     class Meta:
         unique_together = ('hotel', 'room_no')
 
-    def is_available(self, start_date, end_date):
-        overlapping = self.bookings.filter(
-            status="CONFIRMED",
-            check_in__lt=end_date,
-            check_out__gt=start_date,
-        )
-        return not overlapping.exist()
+    # def is_available(self, start_date, end_date):
+    #     overlapping = self.bookings.filter(
+    #         status="CONFIRMED",
+    #         check_in__lt=end_date,
+    #         check_out__gt=start_date,
+    #     )
+    #     return not overlapping.exist()
     
     def __str__(self):
         return f"room_id: {self.id} room_type: {self.type} - hotel_id: {self.hotel}"
@@ -85,24 +75,6 @@ class Event(models.Model):
                                        default='Free')
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name="events")
-
-# class LocalAttraction(models.Model):
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-#     name = models.CharField(max_length=20, blank=False, null=False, db_index=True)
-#     description = models.TextField(blank=False, null=False)
-#     accessibility = models.CharField(
-#                                        max_length=4, 
-#                                        choices=[
-#                                            ('Free', 'Free'),
-#                                             ('Paid','Paid')
-#                                             ], 
-#                                        default='Free',
-#                                        db_index=True
-#                                        )
-#     type = models.CharField(max_length=20, null=False, blank=False, db_index=True)
-#     location = models.OneToOneField(Location, on_delete=models.SET_NULL, null=True, blank=False)
-#     city = models.ForeignKey(City, on_delete=models.CASCADE, blank=False, null=False)
-#     availability = models.BooleanField(default=True)
 
 class HotelAttraction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)

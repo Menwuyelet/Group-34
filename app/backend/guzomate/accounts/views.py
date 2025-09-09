@@ -30,6 +30,7 @@ class GuestCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+
 class GuestListView(generics.ListAPIView):
     serializer_class = GuestSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -107,8 +108,8 @@ class OwnerListView(generics.ListAPIView):
     
 ## Admin
 class AdminViewSets(viewsets.ModelViewSet):
-    serializer_class = OwnerAdminSerializer
     permission_classes = [IsAdmin]
+    serializer_class = OwnerAdminSerializer
     lookup_field = 'id'
 
     def get_queryset(self):

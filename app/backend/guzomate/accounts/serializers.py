@@ -175,7 +175,6 @@ class GuestSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-
 class OwnerAdminSerializer(serializers.ModelSerializer):
     password = serializers.CharField(required=True, write_only=True)
     class Meta:

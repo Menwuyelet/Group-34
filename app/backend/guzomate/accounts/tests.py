@@ -170,7 +170,7 @@ class UserViewsTest(APITestCase):
             booking=self.booking1
         )
 
-        ## Another user's history (should not be accessible by test_user)
+        ## Another user's history 
         self.other_user_history = UserHistory.objects.create(
             user=self.admin_user,
             booking=self.other_booking
@@ -181,7 +181,7 @@ class UserViewsTest(APITestCase):
             user=self.test_user,
             hotel=self.hotel.id
         )
-    # user
+    ## user
     def test_create_user_with_valid_data(self):
         url = reverse('create_user')
         data = {
@@ -464,7 +464,6 @@ class UserViewsTest(APITestCase):
 
     ## owner
     def test_admin_can_retrieve_owner(self):
-        # Create owner first
         owner_data = {
             "email": "owner@example.com",
             "first_name": "owner",
@@ -486,7 +485,6 @@ class UserViewsTest(APITestCase):
 
     def test_admin_can_update_owner(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.admin_token}')
-        # Create owner first
         owner_data = {
             "email": "owner@example.com",
             "first_name": "owner",
@@ -630,7 +628,7 @@ class UserViewsTest(APITestCase):
         response = self.client.get(list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    #Booking
+    ##Booking
     def test_create_booking_success(self):
         url = reverse(
             "book_online",
@@ -703,7 +701,7 @@ class UserViewsTest(APITestCase):
         booking = Booking.objects.filter(start_date=str(date.today()))
         self.assertEqual(booking[0].user, self.test_user) 
 
-    #Update booking
+    ###Update booking
     def test_successful_booking_update(self):
         url = reverse(
             "update_user_booking",
@@ -739,7 +737,7 @@ class UserViewsTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    #List
+    ###List
     def test_list_user_bookings(self):
         url = reverse("user_booking_list", kwargs={"id": self.test_user.id})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
@@ -767,7 +765,8 @@ class UserViewsTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-    #cancel
+    
+    ###cancel
     def test_cancel_own_booking(self):
         url = reverse(
             "cancel_user_booking",
@@ -792,7 +791,7 @@ class UserViewsTest(APITestCase):
         self.other_booking.refresh_from_db()
         self.assertNotEqual(self.other_booking.status, "Cancelled")
 
-    #User history
+    ##User history
     def test_user_can_list_own_history(self):
         url = reverse("list_user_booking_history", kwargs={"id": self.test_user.id})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
@@ -849,7 +848,7 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], str(self.user_history1.id))
 
-    #Delete user history
+    ###Delete user history
     def test_user_can_delete_own_history(self):
         url = reverse("delete_user_booking_history", kwargs={"id": self.test_user.id, "history_id": self.user_history1.id})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
@@ -866,6 +865,7 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(UserHistory.objects.filter(id=self.user_history1.id).exists())
 
+    ##Favorite
     def test_user_can_create_favorite(self):
         url = reverse("create_favorite", kwargs={"hotel_id": self.hotel.id})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
@@ -892,7 +892,6 @@ class UserViewsTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], str(self.favorite.id))
-
     
     def test_user_cannot_retrieve_others_favorite(self):
         url = reverse("retrieve_guest_favorite", kwargs={
@@ -915,7 +914,6 @@ class UserViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Favorite.objects.filter(id=self.favorite.id).exists())
 
-    
     def test_user_cannot_delete_others_favorite(self):
         url = reverse("delete_guest_favorite", kwargs={
             "id": self.test_user.id,
@@ -926,8 +924,7 @@ class UserViewsTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(Favorite.objects.filter(id=self.favorite.id).exists())
-    
-    
+     
     def test_admin_can_retrieve_any_favorite(self):
         url = reverse("retrieve_guest_favorite", kwargs={
             "id": self.test_user.id,

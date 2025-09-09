@@ -4,7 +4,6 @@ from hotel.models import Hotel, Room, Location
 from accounts.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from hotel.utils.path import user_id_image_upload_path
-from datetime import datetime
 
 # Create your models here.
 class Review(models.Model):
@@ -85,7 +84,6 @@ class Booking(models.Model):
     def __str__(self):
         return  self.id
     
-## to accounts
 class UserHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, blank=False)
@@ -100,7 +98,6 @@ class HotelHistory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     source = models.CharField(max_length=10)
 
-## to accounts
 class Favorite(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     hotel = models.UUIDField(null=False, blank=False)
@@ -115,6 +112,7 @@ class City(models.Model):
 
     def __str__(self):
         return f"city_id: {self.id} - city_name: {self.name}"
+    
 class LocalAttraction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.CharField(max_length=20, blank=False, null=False, db_index=True)

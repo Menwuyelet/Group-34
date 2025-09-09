@@ -1,5 +1,14 @@
 from rest_framework import serializers
-from .models import Review, City, LocalAttraction, HotelCities, Favorite, Booking, HotelHistory, UserHistory
+from .models import (
+                        Review, 
+                        City, 
+                        LocalAttraction, 
+                        HotelCities, 
+                        Favorite, 
+                        Booking, 
+                        HotelHistory, 
+                        UserHistory
+                    )
 from hotel.models import Hotel, Location, Image
 from hotel.serializers import LocationSerializer
 from django.db import transaction
@@ -187,8 +196,6 @@ class FavoriteSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
-
-## Booking
 
 class BookingSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -466,16 +473,14 @@ class BookingStatusSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
-    
-## Hotel History
 
 class HotelHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = HotelHistory
         fields = ['id', 'user', 'hotel', 'booking', 'created_at']
 
-    
 class UserHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserHistory
         fields = ['id', 'user', 'booking', 'created_at']
+        
