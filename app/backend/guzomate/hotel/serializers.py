@@ -2,12 +2,9 @@ from rest_framework import serializers
 from .models import (
                        Location,
                        Image, 
-                    #    City, 
                        Hotel, 
                        Room, 
                        Amenities, 
-                    #    LocalAttraction, 
-                    #    HotelCities, 
                        HotelAttraction, 
                        Event
                     )
