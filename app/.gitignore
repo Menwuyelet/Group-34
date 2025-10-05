@@ -1,2 +1,11 @@
 task_plan.md
 test_data.md
+backend/guzomate/__pycache__/
+backend/guzomate/*.pyc
+backend/guzomate/*.pyo
+backend/guzomate/*.pyd
+
+# Django
+*.log
+*.sqlite3
+/media/
