@@ -1,6 +1,5 @@
 from django.db import models
 import uuid
-from accounts.models import User
 from .utils.path import dynamic_upload_path
 # Create your models here.
 
