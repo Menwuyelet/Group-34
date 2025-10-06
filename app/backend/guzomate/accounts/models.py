@@ -68,5 +68,3 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def is_hotel_staff(self):
         return self.role in ["Manager", "Receptionist"]
-    
-
